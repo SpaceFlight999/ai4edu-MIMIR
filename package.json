@@ -1,0 +1,15 @@
+{
+  "name": "mimir-growth-workspace",
+  "version": "0.12.7",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-growth.mjs",
+    "test": "node --test growth/test/*.test.mjs",
+    "install:runtime": "node scripts/install-growth.mjs",
+    "verify:runtime": "node scripts/verify-runtime.mjs"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

@@ -1,0 +1,23 @@
+runtime/
+.test-data/
+artifacts/
+data/
+node_modules/
+*.log
+
+# Original Mimir distribution (restore locally using Install MIMIR.cmd)
+/Mimir-*-Windows-x64/
+/Mimir-*-Windows-x64.zip
+
+# Local credentials and environment settings
+.env
+.env.*
+!.env.example
+model.secret
+instance.json
+
+# Local database files and Python caches
+*.sqlite
+*.sqlite-*
+__pycache__/
+*.pyc
