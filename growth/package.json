@@ -1,0 +1,25 @@
+{
+  "name": "@mimir/growth-layer",
+  "version": "0.12.7",
+  "description": "MIMIR personal growth coach and learning journey",
+  "type": "module",
+  "main": "./src/host.mjs",
+  "exports": {
+    ".": "./src/host.mjs",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-connection",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  }
+}

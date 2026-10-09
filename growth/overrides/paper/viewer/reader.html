@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Mimir · 论文阅读</title><link rel="stylesheet" href="./style.css"><link rel="stylesheet" href="./refraction.css"><script type="module" src="./app.mjs"></script></head>
+<body>
+<a class="skip" href="#paper-view">跳到论文原文</a>
+<header><div><h1>论文导读</h1><p id="paper-title">导入一篇论文，开始阅读与核对</p></div><div class="actions"><button id="import-button" class="primary">导入 PDF</button><input type="file" id="import-file" accept="application/pdf,.pdf" multiple hidden><button id="cancel" hidden>取消生成</button><button id="export">导出笔记</button><button id="settings-toggle" aria-expanded="false" aria-controls="settings">模型</button></div></header>
+<nav id="paper-tabs" class="paper-tabs" aria-label="已打开的论文"></nav><div class="paper-access"><label class="tool-access"><input id="tools-enabled" type="checkbox">允许研究工具读取这篇论文（含跨论文研究）</label><button id="paper-rename">修改论文名称</button><small>切换或关闭页签会保留本机批注、导读和工作台建议。</small></div>
+<p id="status" role="status" aria-live="polite">正在连接业务服务…</p>
+<section id="settings" hidden aria-label="模型选择">
+  <p id="runtime-status" hidden></p><p id="data-directory" hidden></p>
+  <div class="form-row"><label>提供商<select id="provider"><option value="">选择提供商</option></select></label><label>模型<select id="model"><option value="">选择模型</option></select></label><button id="model-save">使用此模型</button></div>
+  <p>研究探讨、论文导读与文稿工作台共用默认模型。</p>
+</section>
+<main class="workspace library-collapsed">
+ <aside id="paper-library" class="library" hidden><div class="library-heading"><h2>论文</h2><button id="library-close" type="button" aria-label="收起论文目录">收起</button></div><div id="paper-list"></div><details open><summary>章节目录</summary><div id="sections"></div></details><label>搜索原文<input id="search" type="search" placeholder="词语或术语"></label><p id="search-count"></p><div id="evidence-list"></div><button id="more" hidden>加载更多证据</button></aside>
+ <section class="reader" aria-label="论文原文"><div class="toolbar"><button id="library-toggle" aria-expanded="false" aria-controls="paper-library">展开目录</button><button id="analysis-toggle" aria-expanded="true" aria-controls="research-analysis">收起助手</button><button id="prev" aria-label="上一页">上一页</button><label>页码<input id="page" type="number" value="1" min="1"></label><span id="pages">/ —</span><button id="next" aria-label="下一页">下一页</button><label>缩放<select id="zoom"><option value="0.6">60%</option><option value="0.8">80%</option><option value="1" selected>适合宽度</option><option value="1.3">130%</option><option value="1.6">160%</option><option value="2">200%</option></select></label></div>
+ <div id="paper-view" tabindex="0" aria-label="PDF 阅读区，左右方向键翻页"><div id="empty">尚未导入论文<br><small>PDF 保存在本机，导读前会说明发送给模型的范围。</small></div><div id="page-surface" hidden><canvas id="canvas" aria-label="PDF 当前页"></canvas><div id="saved-highlights"></div><div id="text-layer" class="textLayer"></div><div id="note-selection-anchor" hidden></div><div id="question-selection-anchor" hidden aria-hidden="true"></div><div id="highlight" hidden></div></div></div>
+ <div class="selection-bar"><p id="selection-status">选中文字可添加批注；扫描页可用页级批注。</p><button id="highlight-selection">高亮</button><button id="annotate-selection">批注</button><button id="ask-selection">提问</button><button id="explain-selection">解释术语</button><button id="translate-selection">翻译</button></div><p id="limitations"></p></section>
+ <aside class="analysis" id="research-analysis"><nav class="tabs" aria-label="研究面板"><button data-tab="guide" aria-pressed="true">导读</button><button data-tab="ask" aria-pressed="false">提问</button><button data-tab="notes" aria-pressed="false">批注</button><button data-tab="research" aria-pressed="false">研究</button><button data-tab="literature" aria-pressed="false">文献</button></nav>
+ <section id="guide" class="tab-panel"><h2>分层导读</h2><label>阅读深度<select id="depth"><option value="overview">快速概览</option><option value="section">章节精读</option><option value="research">研究分析</option></select></label><p id="model-disclosure">发送范围：仅当前论文中可提取的原文，超过上限时只处理部分内容。模型未配置时仍可阅读、批注。</p><button id="generate" class="primary">发送所示范围并生成导读</button><div id="guide-result"></div><details><summary>论点—证据地图</summary><div id="argument-map"></div></details><details><summary>复现准备清单</summary><div id="reproduction"></div></details></section>
+ <section id="ask" class="tab-panel" hidden><h2>上下文提问</h2><label>提问范围<select id="scope"><option value="paper">当前论文</option><option value="section">当前章节</option><option value="selection">当前选区及所在页</option></select></label><div id="quick-questions"></div><label>问题<textarea id="question" rows="4" maxlength="2000" placeholder="输入问题，可以继续追问"></textarea></label><p>仅发送当前范围原文和当前论文最近四轮问答，不读取外部文献全文。</p><button id="ask-button" class="primary">发送所示范围并提问</button><div id="answers"></div></section>
+ <section id="notes" class="tab-panel" hidden><h2>批注与研究笔记</h2><label>筛选文字或标签<input id="note-filter" type="search"></label><label>批注内容<textarea id="note-text" rows="5" maxlength="5000"></textarea></label><label>标签<input id="note-tags" maxlength="200" placeholder="例如：方法、待核实"></label><p id="note-anchor">保存到当前页（页级批注）</p><button id="note-save" class="primary">保存批注</button><button id="note-new">新建批注</button><h3>未保存草稿</h3><div id="note-drafts"></div><div id="note-list"></div></section>
+ <section id="research" class="tab-panel" hidden><h2>综合批判性研究与写作</h2>
+ <input id="research-workflow" type="hidden" value="synthesis-writing">
+ <section class="research-selection"><h3>选择已导读的论文</h3><p>可选择一篇或多篇。浅色论文需先完成导读，再在上方允许研究工具读取。</p><div id="research-papers"></div></section>
+ <section class="critical-points"><h3>批判性思考点</h3><div id="critical-options"></div><label>补充自己的思考点<textarea id="critical-custom" rows="3" maxlength="2000" placeholder="写下希望深入检验的假设、分歧或写作要求"></textarea></label></section>
+ <label>研究问题或写作目标<textarea id="research-question" rows="4" maxlength="2000" placeholder="例如：核心假设、证据强度与适用条件是什么？两篇论文的方法有什么异同？"></textarea></label>
+ <p>读取所选论文可提取的全文，最多运行十五分钟。图表、公式与扫描页尚未完整提取；结果必须核对原文。草稿不会自动覆盖工作台正文。</p>
+ <button id="research-start" class="primary">生成写作草稿</button><button id="research-cancel" hidden>取消研究任务</button>
+ <p id="research-status" role="status"></p><div id="research-result"></div>
+ <button id="research-publish" class="primary" disabled>提交草稿到工作台建议</button><button id="research-export" disabled>导出草稿与证据 JSON</button>
+ <h3>最近研究任务</h3><p>按创建时间从新到旧显示。写作成功的任务保留，只有手动删除才会移除；失败、超时或中断的任务在结束 1 小时后自动清理。已提交的工作台建议独立保留。</p><button id="research-history-refresh">刷新任务</button><div id="research-history"></div></section>
+ <section id="literature" class="tab-panel" hidden><h2>文献与来源</h2><label>文献源<select id="database"><option value="crossref">Crossref</option><option value="openalex">OpenAlex</option></select></label><label>标题、DOI 或研究关键词<input id="literature-query" maxlength="200"></label><button id="verify-source">用当前标题核对来源</button><button id="search-literature" class="primary">检索文献</button><button id="cancel-literature" hidden>取消检索</button><p id="literature-status" role="status"></p><div id="literature-results"></div><h3>已保存文献</h3><div id="saved-literature"></div><button id="export-bib">导出 BibTeX</button><p>候选结果仅为摘要或元数据；关键词相似不表示引用关系，引用次数不表示研究质量。</p></section>
+ </aside>
+</main>
+</body></html>
