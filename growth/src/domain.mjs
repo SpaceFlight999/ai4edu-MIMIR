@@ -56,6 +56,7 @@ export function reviewStatus(state, now = new Date().toISOString()) {
 export function validatePlanOutput(output, profile, legacyCourseIndices = new Set(), topicChoices = [], trustedChoices = []) {
   if (!output || typeof output !== 'object' || !Array.isArray(output.tasks) || output.tasks.length < 1 || output.tasks.length > 16) fail('方案需要1至16项学习任务。', 'INVALID_MODEL_OUTPUT', 422)
   const tasks = output.tasks.map((task, i) => {
+    if (!task || typeof task !== 'object' || Array.isArray(task)) fail('学习任务结构无效。', 'INVALID_MODEL_OUTPUT', 422)
     if (!AREAS.some((a) => a.id === task.area) || profile.weights[task.area] === 0) fail('方案包含未选择的成长方向。', 'INVALID_MODEL_OUTPUT', 422)
     if (!resourceById(task.resourceId) || resourceById(task.resourceId).area !== task.area) fail('方案引用了目录之外或方向不匹配的资源。', 'INVALID_MODEL_OUTPUT', 422)
     const unit = task.courseRef && courseUnit(task.courseRef.id, task.courseRef.variant, legacyCourseIndices.has(i), trustedChoices[i] || topicChoices.find(item => item.id === task.courseRef.id))
@@ -119,7 +120,7 @@ function sameTaskContent(a, b) {
   const content = task => ({ area: task.area, resourceId: task.resourceId, title: task.title, objective: task.objective, criteria: task.criteria, courseRef: task.courseRef || null, topicRef: task.topicRef || null, studyChoice: task.studyChoice || null })
   return JSON.stringify(content(a)) === JSON.stringify(content(b))
 }
-export function makeDraft(state, output, { profile = state.profile, mode = 'model', advance = false, source = 'generation', continueFrom = [], replaces = [], reasons = [] } = {}) {
+export function makeDraft(state, output, { profile = state.profile, mode = 'model', advance = false, source = 'generation', continueFrom = [], replaces = [], reasons = [], importedChoices = [] } = {}) {
   const current = activePlan(state), now = new Date().toISOString()
   // Keep an existing unit version only for an unchanged, server-matched continuation.
   // Neither shared templates nor client-supplied legacy flags can select old rules.
@@ -132,7 +133,7 @@ export function makeDraft(state, output, { profile = state.profile, mode = 'mode
     const old = current?.tasks.find(item => item.id === (continueFrom[i] || replaces[i]))
     return old?.courseRef?.id === task.courseRef?.id ? old?.studyChoice : null
   })
-  const normalized = validatePlanOutput(output, profile, legacyCourseIndices, state.customChoices || [], trustedChoices)
+  const normalized = validatePlanOutput(output, profile, legacyCourseIndices, [...importedChoices, ...(state.customChoices || [])], trustedChoices)
   const draft = { ...normalized, id: randomUUID(), status: 'draft', mode, source, createdAt: now, profile: validateProfile(profile),
     basedOn: state.activePlanId, stage: current ? current.stage + (advance ? 1 : 0) : 1, advance, startsAt: null, endsAt: null, checkInAt: null }
   const carried = new Set()
@@ -180,33 +181,44 @@ export function confirmDraft(state, id, now = new Date().toISOString()) {
 export function sharePlan(state) {
   const plan = activePlan(state)
   if (!plan) fail('先确认一份培养方案。')
-  return { format: 'mimir-growth-template', schemaVersion: 1, title: plan.title, summary: plan.summary,
-    weights: { ...plan.profile.weights }, depths: { ...plan.profile.depths }, horizonWeeks: plan.profile.horizonWeeks,
-    tasks: plan.tasks.map(({ area, title, objective, hours, week, resourceId, criteria, prerequisites, courseRef }) => ({ area, title, objective, hours, week, resourceId, criteria, prerequisites, ...(courseRef ? { courseRef } : {}) })),
-    roadmap: plan.roadmap.map((row) => ({ ...row })) }
+  return { format: 'mimir-growth-template', schemaVersion: 1, ...shareSafe({ ...plan,
+    weights: plan.profile.weights, depths: plan.profile.depths, horizonWeeks: plan.profile.horizonWeeks }) }
 }
 export function validateShare(input) {
   if (!input || input.format !== 'mimir-growth-template' || input.schemaVersion !== 1) fail('只支持MIMIR v1方案文件。')
   const profile = validateProfile({ ...defaultProfile(), weights: input.weights, depths: input.depths, horizonWeeks: input.horizonWeeks, weeklyHours: 40 })
-  validatePlanOutput({ ...input, rationale: '共享模板' }, profile)
-  return shareSafe(input)
+  const choices = (Array.isArray(input.tasks) ? input.tasks : []).filter(task => task?.studyChoice).map(task => sharedStudyChoice(task.studyChoice, task.courseRef))
+  const normalized = validatePlanOutput({ ...input, rationale: '共享模板' }, profile, new Set(), choices)
+  return shareSafe({ ...normalized, weights: profile.weights, depths: profile.depths, horizonWeeks: profile.horizonWeeks })
+}
+function sharedStudyChoice(value, courseRef) {
+  if (!value || typeof value !== 'object' || Array.isArray(value) || value.label !== '深入学习主题' || typeof value.id !== 'string' || !/^custom-[A-Za-z0-9-]{1,100}$/.test(value.id) || value.id !== courseRef?.id) fail('共享主题定义与课程引用不一致。')
+  const source = text(value.source ?? '', '来源地址', 1000, false)
+  if (source) {
+    let url; try { url = new URL(source) } catch { fail('主题来源需为完整的 http 或 https 地址。') }
+    if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) fail('主题来源需为不含登录信息的 http 或 https 地址。')
+  }
+  return { id: value.id, label: value.label, title: text(value.title, '主题名称', 80), detail: text(value.detail ?? '', '主题说明', 1200, false), source }
 }
 function shareSafe(input) {
+  const profile = validateProfile({ ...defaultProfile(), weights: input.weights, depths: input.depths, horizonWeeks: input.horizonWeeks, weeklyHours: 40 })
   return { title: text(input.title, '方案标题', 160), summary: text(input.summary, '方案说明', 2400),
-    weights: input.weights, depths: input.depths, horizonWeeks: input.horizonWeeks,
-    tasks: input.tasks.map(({ area, title, objective, hours, week, resourceId, criteria, prerequisites, courseRef }) => ({ area, title, objective, hours, week, resourceId, criteria, prerequisites, ...(courseRef ? { courseRef: { id: courseRef.id, variant: courseRef.variant } } : {}) })), roadmap: input.roadmap ?? [] }
+    weights: profile.weights, depths: profile.depths, horizonWeeks: profile.horizonWeeks,
+    tasks: input.tasks.map(({ area, title, objective, hours, week, resourceId, criteria, prerequisites = [], courseRef, studyChoice }) => ({ area, title, objective, hours, week, resourceId, criteria: [...criteria], prerequisites: [...prerequisites], ...(courseRef ? { courseRef: { id: courseRef.id, variant: courseRef.variant } } : {}), ...(studyChoice ? { studyChoice: sharedStudyChoice(studyChoice, courseRef) } : {}) })), roadmap: validateRoadmap(input.roadmap ?? [], profile) }
 }
 export function adaptShare(template, profile) {
   const input = validateShare({ ...template, format: 'mimir-growth-template', schemaVersion: 1 })
   const totals = { 1: 0, 2: 0 }
   for (const task of input.tasks) if (profile.weights[task.area] > 0) totals[task.week] += task.hours
-  const tasks = input.tasks.filter((t) => profile.weights[t.area] > 0).map((task) => ({ ...task, hours: Math.max(0.25, Math.floor(task.hours * Math.min(1, profile.weeklyHours / totals[task.week]) * 4) / 4) }))
+  const retained = input.tasks.map((task, index) => ({ task, index })).filter(({ task }) => profile.weights[task.area] > 0)
+  const indices = new Map(retained.map(({ index }, next) => [index, next]))
+  const missingPrerequisite = retained.some(({ task }) => task.prerequisites.some(index => !indices.has(index)))
+  const tasks = retained.map(({ task }) => ({ ...task, prerequisites: task.prerequisites.map(index => indices.get(index)), hours: Math.max(0.25, Math.floor(task.hours * Math.min(1, profile.weeklyHours / totals[task.week]) * 4) / 4) }))
   const hours = { 1: 0, 2: 0 }
   for (const task of tasks) hours[task.week] += task.hours
-  if (hours[1] > profile.weeklyHours || hours[2] > profile.weeklyHours || AREAS.some((a) => profile.weights[a.id] >= 20 && !tasks.some((t) => t.area === a.id))) {
+  if (missingPrerequisite || hours[1] > profile.weeklyHours || hours[2] > profile.weeklyHours || AREAS.some((a) => profile.weights[a.id] >= 20 && !tasks.some((t) => t.area === a.id))) {
     return { ...templatePlan(profile), title: `重新适配 · ${input.title}`, rationale: '共享方案与当前侧重或时间不匹配，按你的配置重建本地示例。' }
   }
-  tasks.forEach((t) => { t.prerequisites = [] })
   return { ...input, tasks, roadmap: templatePlan(profile).roadmap, title: `重新适配 · ${input.title}`, rationale: '按当前可投入时间缩放任务，沿用共享方案内容；请确认是否适合自己的基础。', questions: templatePlan(profile).questions }
 }
 export function assessQuiz(resourceId, answers) {

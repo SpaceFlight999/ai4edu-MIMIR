@@ -1,0 +1,35 @@
+{
+  "name": "@mimir/wordmark",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MIMIR custom vector wordmark assets",
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./index.mjs",
+    "./svg/*": "./svg/*",
+    "./png/*": "./png/*",
+    "./interactive": "./interactive.mjs"
+  },
+  "files": [
+    "svg",
+    "png",
+    "index.mjs",
+    "README.md",
+    "build.mjs",
+    "preview.svg",
+    "preview.png",
+    "interactive.mjs",
+    "demo.html",
+    "demo.mjs",
+    "serve.mjs",
+    "artwork.svg",
+    "mimir-original-transparent.png",
+    "motion-runtime.mjs",
+    "tone.mjs"
+  ],
+  "scripts": {
+    "build:svg": "node build.mjs",
+    "demo": "node serve.mjs"
+  }
+}

@@ -3,11 +3,11 @@ export function agentFixture(context, { frames, steps = 1, disposeError } = {}) 
   const stats = { disposed: 0, cancelled: 0, tools: [], sections: [], restrictions: [], guards: [], runtimeContextSuppressed: false, messages: [] }
   const wrapped = { ...context, tools: {}, systemPrompt: {}, agents: { async create(options) {
     const listeners = new Map(), controller = new AbortController()
-    let work = Promise.resolve()
+    let work = Promise.resolve(), ownSection
     const emit = (name, event) => listeners.get(name)?.(event)
     const scoped = {
       on: (name, callback) => listeners.set(name, callback),
-      systemPrompt: { section: section => stats.sections.push(section), suppressRuntimeContext: () => { stats.runtimeContextSuppressed = true } },
+      systemPrompt: { section: section => { stats.sections.push(section); ownSection = section }, suppressRuntimeContext: () => { stats.runtimeContextSuppressed = true } },
       tools: { presentAs: () => {}, restrict: filter => stats.restrictions.push(filter), guard: guard => stats.guards.push(guard), register: tool => stats.tools.push(tool) },
     }
     const agent = {
@@ -17,7 +17,7 @@ export function agentFixture(context, { frames, steps = 1, disposeError } = {}) 
         work = (async () => {
           try {
             for (let i = 0; i < steps; i++) { const decision = await listeners.get('agent/pre-step')?.({}, async () => ({ kind: 'enter', messages: [message] })); if (decision?.kind === 'reject') return }
-            const stream = frames || (await context.llm.prepareCall(options.agentOptions, controller.signal)).stream({ system: stats.sections[0].text, messages: [message], signal: controller.signal })
+            const stream = frames || (await context.llm.prepareCall(options.agentOptions, controller.signal)).stream({ system: ownSection.text, messages: [message], signal: controller.signal })
             emit('agent/assistant-stream', { frame: { type: 'start' } })
             for await (const chunk of stream) emit('agent/assistant-stream', { frame: { type: 'chunk', chunk } })
             emit('agent/assistant-stream', { frame: { type: 'end', outcome: { kind: 'committed', eventType: 'assistant/message' } } })

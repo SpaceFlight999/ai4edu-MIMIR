@@ -1,0 +1,4 @@
+1. 在"D:\Xiaorui Wang\AI+竞赛资料\v0.12.9\mimir-wordmark"里操作。请将主页面右栏最左上角的“MIMIR”ui进行大幅度修改。
+2. 按照"D:\Xiaorui Wang\AI+竞赛资料\v0.12.9\mimir-wordmark\效果图1.png"，去除英文，保留图案，重新设计“MIMIR”艺术字效果，并在本文件夹中修改。
+3. 要求将主页面右栏最左上角的“MIMIR”ui替换为新设计的这个ui
+4. 重新拟定设计艺术字流动效果，以及交互式ui设计，并加以应用

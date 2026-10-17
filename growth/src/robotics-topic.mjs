@@ -20,11 +20,11 @@ export function roboticsFoundation(course) {
     title: '建立理解 · 二连杆机械臂运动学分析', unitKey: 'course:mit-robotics:foundation:planar-2r-v1', topicRef: ROBOTICS_TOPIC.id, courseRef: { id: course.id, variant: 'foundation' },
     course: { id: course.id, title: course.title, url: course.url, provider: course.provider, concepts: course.concepts },
     guide, questions: course.questions, objective: '用相对角与连杆投影解释正运动学，完成三个可复查的仿真算例，整理运动学分析与实物验证边界。',
-    criteria: ['完成三项先修检查并写下判断依据', '完成课程检查练习并解释答案', '验证零角度、直角和自选算例，记录预测与计算误差', '整理应用场景、检查方法与模型边界'],
+    criteria: ['记录学习问题与判断依据', '解释验证结果与差异', '验证零角度、直角和自选算例，记录预测与计算误差', '整理应用场景、检查方法与模型边界'],
     workshop: { title: '二连杆机械臂 · 从预测到验证', blocks: [
-      { title: '检查先修，解释关节角', hint: '先做下方三项检查。答错时先看对应提示，再试；结果只说明本次答题，不代表整门课掌握程度。', guide, topicLab: 'diagnosis', fields: [field('prediction', '我的判断与依据', '说明θ₂是什么角；预测零角度时末端在哪里。')] },
-      { title: '验证三个算例，再解释结果', hint: '在专用工作台填写预测，再验证零角度、直角与自选输入。下方课程问答继续检查概念。', guide: '先算第一段终点，再把第二段沿θ₁+θ₂方向的投影相加。错解先检查单位、相对角定义、符号和长度。', topicLab: 'workbench', lab: 'course-quiz', fields: [field('explanation', '我的答案解释或纠错', '用已保存的算例说明两段投影，解释一次错解的原因。')] },
-      { title: '整理运动学分析报告', hint: '先从验证记录生成报告草稿，再说明能用于哪个场景、还有什么不能确定。', guide: '理想仿真不能代替实物定位验证。保持测试点、长度与单位一致，测量实际末端位置，计算偏差并记录零位与标定条件；没有硬件时记为待测。', fields: [field('transfer', '我的应用场景与检查方法', '例如分拣点定位：说明坐标系、单位、实测方法和待验证的误差。')] },
+      { title: '明确运动学问题', hint: '打开课程来源，记录想分析的机械臂运动与自己的判断。', fields: [field('prediction', '我的问题与判断依据', '说明研究问题、角度定义与预测依据。')] },
+      { title: '验证三个算例，再解释结果', hint: '在专用工作台填写预测，再验证零角度、直角与自选输入。', topicLab: 'workbench', fields: [field('explanation', '我的验证分析', '用已保存的算例说明两段投影与结果差异。')] },
+      { title: '整理运动学分析报告', hint: '先从验证记录生成报告草稿，再说明能用于哪个场景、还有什么不能确定。', fields: [field('transfer', '我的应用场景与检查方法', '例如分拣点定位：说明坐标系、单位、实测方法和待验证的误差。')] },
     ] },
   }
 }

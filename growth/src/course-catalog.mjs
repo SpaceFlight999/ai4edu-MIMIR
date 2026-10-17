@@ -62,15 +62,16 @@ export function courseUnit(id, variant = 'foundation', legacy = false, studyChoi
   const [topic, guide] = (lessons[id] || course.guides)[variant]
   const questions = variant === 'foundation' ? course.questions : [practice[id]?.[variant] || (variant === 'deepen' ? course.compare : course.questions[variant === 'support' ? 0 : 1])]
   const field = (id, label, placeholder) => ({ id, label, placeholder, required: true })
+  const topicFollowup = id === 'mit-robotics' && variant !== 'foundation'
   return {
     title: `${variantLabels[variant]} · ${topic}`, unitKey: `course:${id}:${variant}`, courseRef: { id, variant },
     course: { id, title: course.title, url: course.url, provider: course.provider, concepts: course.concepts },
     guide, questions,
     objective: `${course.purpose}本单元聚焦：${topic}。`,
-    criteria: ['用自己的话记录导学中的判断与依据', '完成本单元检查练习并解释答案', '提出一个迁移案例及可检验的方法'],
+    criteria: topicFollowup ? ['记录来源材料中的问题与判断依据', '解释学习或验证结果', '提出一个应用案例及可检验的方法'] : ['用自己的话记录导学中的判断与依据', '完成本单元检查练习并解释答案', '提出一个迁移案例及可检验的方法'],
     workshop: { title: `${course.title} · ${variantLabels[variant]}`, blocks: [
-      { title: '读一小段，先作判断', hint: '这是 MIMIR 原创导学。可打开官方课程核对相关材料，再记录你自己的判断。', guide, fields: [field('prediction', '我的判断与依据', '选导学中的一个问题，先写出判断和理由。')] },
-      { title: '检查练习，解释或纠错', hint: '先回答，再解释依据；答错可以重试。检查结果不等于知识掌握度。', lab: 'course-quiz', fields: [field('explanation', '我的答案解释或纠错', '是哪一步支持你的答案？原来的想法需要怎样修改？')] },
+      { title: topicFollowup ? '阅读来源，明确问题' : '读一小段，先作判断', hint: topicFollowup ? '打开课程来源，记录想继续研究的问题与判断依据。' : '这是 MIMIR 原创导学。可打开官方课程核对相关材料，再记录你自己的判断。', ...(!topicFollowup ? { guide } : {}), fields: [field('prediction', '我的判断与依据', topicFollowup ? '根据来源材料记录问题、判断与理由。' : '选导学中的一个问题，先写出判断和理由。')] },
+      { title: topicFollowup ? '记录学习与验证结果' : '检查练习，解释或纠错', hint: topicFollowup ? '根据自己的学习或实践记录，说明结果与判断依据。' : '先回答，再解释依据；答错可以重试。检查结果不等于知识掌握度。', ...(!topicFollowup ? { lab: 'course-quiz' } : {}), fields: [field('explanation', topicFollowup ? '我的结果分析' : '我的答案解释或纠错', topicFollowup ? '解释结果、差异与适用条件。' : '是哪一步支持你的答案？原来的想法需要怎样修改？')] },
       { title: '把成果用于一个具体场景', hint: '写出一个自己的迁移案例与检验方法，没有实际运行的结果明确记为待验证。', fields: [field('transfer', '我的迁移案例与检查方法', '说明输入、预期结果、如何检验，以及当前还不能确定的部分。')] },
     ] },
   }

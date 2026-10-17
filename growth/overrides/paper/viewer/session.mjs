@@ -10,8 +10,20 @@ export function displayTime(value) {
 }
 export function chineseError(error) {
   const code = String(error?.code ?? '').toUpperCase();
+  if (error?.workbenchImport) {
+    const messages = {
+      SCOPE_DENIED: '导入未完成：论文或证据不属于当前项目，或来源授权范围已变化，请核对来源。',
+      VERSION_CONFLICT: '导入未完成：论文或文稿版本已变化，请刷新后重新核对并提交。',
+      IDEMPOTENCY_MISMATCH: '导入未完成：相同提交记录的内容已变化，请重新核对草稿。',
+      ANCHOR_ORPHANED: '导入未完成：目标段落已变化，请刷新文稿后重新提交。'
+    };
+    if (messages[code]) return messages[code];
+    if (code === 'INVALID_ARGUMENT') return '导入未完成：' + chineseError({message:String(error.message??'').replace(/\s*\([A-Z_\d]+\)\s*$/, '')});
+  }
   if (/TIMEOUT|TIMED_OUT/.test(code) || error?.name === 'TimeoutError') return '处理超时，请稍后重试或减少所选论文。';
   if (/CANCEL/.test(code) || error?.name === 'AbortError') return '任务已取消。';
+  if (code === 'PAPER_IN_USE') return /研究任务/.test(error?.message??'') ? '这篇论文仍关联研究任务，请先在研究历史中删除关联任务。' : '这篇论文仍被文稿引用或建议使用，暂不能删除。';
+  if (code === 'CONSENT_REQUIRED') return '请确认所选操作后重试。';
   if (/AUTH|CREDENTIAL|KEY/.test(code) || [401,403].includes(error?.status)) return '模型授权不可用，请在设置中检查模型和密钥。';
   if (/STALE|VERSION/.test(code)) return '论文或文稿版本已变化，请刷新后重新核对。';
   if (code === 'MODEL_CONTEXT_LIMIT') return '原文超出所选模型的上下文容量，请更换容量更大的模型或减少所选论文。';

@@ -18,8 +18,8 @@ export function buildCourseCandidate(state, courseId, variant = 'foundation', to
   const base = current || templatePlan(profile), tasks = copiedTasks(base)
   const index = upgrade ? tasks.findIndex(task => task.id === existing.id) : tasks.findIndex(task => task.area === 'gpa' && state.evidence[task.id]?.status !== 'completed')
   if (index < 0) fail('当前课程目标均已完成，请先进入下一阶段，再加入新课程。', 'COURSE_STAGE_COMPLETE', 409)
-  tasks[index] = setUnit(tasks[index], unit, upgrade ? '升级为运动学专题，增加先修检查与算例验证；旧课程过程和成果保留在历史中。' : '选择这门课程，替换原课程方向目标；其余可延续的学习保留。')
-  return { output: { ...base, title: `${unit.course.title} · 阶段学习方案`, summary: '把选定课程加入当前阶段，先读一段导学，再做检查和迁移。确认前当前方案继续有效。', rationale: '沿用现有时间预算；课程标题、来源和工作坊由同一课程引用确定。', tasks }, profile,
+  tasks[index] = setUnit(tasks[index], unit, upgrade ? '升级为运动学专题，增加算例验证；旧课程过程和成果保留在历史中。' : '选择这门课程，替换原课程方向目标；其余可延续的学习保留。')
+  return { output: { ...base, title: `${unit.course.title} · 阶段学习方案`, summary: unit.studyTopic || unit.topicRef || (courseId === 'mit-robotics' && variant !== 'foundation') ? '把选定主题加入当前阶段，阅读来源材料、记录算例验证并整理报告。确认前当前方案继续有效。' : '把选定课程加入当前阶段，先读一段导学，再做检查和迁移。确认前当前方案继续有效。', rationale: '沿用现有时间预算；课程标题、来源和工作坊由同一课程引用确定。', tasks }, profile,
     continueFrom: current ? current.tasks.map((task, i) => i === index ? null : task.id) : [], replaces: current ? current.tasks.map(task => task.id) : [],
     reasons: tasks.map((task, i) => i === index ? task.reason : '学习内容与完成标准一致，延续已有成果和过程。') }
 }

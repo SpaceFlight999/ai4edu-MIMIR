@@ -39,6 +39,5 @@ export function prepareRobotics(input, state) {
 export function checkRoboticsCompletion(state, task) {
   if (task.topicRef !== ROBOTICS_TOPIC.id) return
   const session = state.roboticsSessions[task.id]
-  if (!session?.diagnosis || session.diagnosis.correct !== session.diagnosis.total) fail('请先按提示完成三项先修检查，再确认专题完成。', 'COURSE_INCOMPLETE', 409)
-  for (const kind of ['zero', 'right', 'custom']) if (!session.trials.some(trial => trial.kind === kind && trial.passed)) fail('专题还需要零角度、直角和自选输入的正确验证记录。已有记录保留，可回到专用工作台继续。', 'COURSE_INCOMPLETE', 409)
+  for (const kind of ['zero', 'right', 'custom']) if (!session?.trials.some(trial => trial.kind === kind && trial.passed)) fail('专题还需要零角度、直角和自选输入的正确验证记录。已有记录保留，可回到专用工作台继续。', 'COURSE_INCOMPLETE', 409)
 }

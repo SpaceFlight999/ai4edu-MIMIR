@@ -104,10 +104,11 @@ export function assessCourseQuiz(task, answers) {
 export function checkCourseCompletion(state, task) {
   if (!task.courseRef) return
   const topic = taskCourseUnit(task)?.studyTopic, saved = state.studySessions?.[task.id]
-  if (topic && (saved?.diagnosis?.correct !== 3 || ['basic', 'reference', 'custom'].some(kind => !saved?.trials?.some(trial => trial.kind === kind && trial.passed)))) fail('先完成三项先修检查和基础、参考、自选三个验证记录。', 'COURSE_INCOMPLETE', 409)
+  if (topic && ['basic', 'reference', 'custom'].some(kind => !saved?.trials?.some(trial => trial.kind === kind && trial.passed))) fail('先完成基础、参考和自选三个验证记录。', 'COURSE_INCOMPLETE', 409)
   const fields = state.learningSessions[task.id]?.fields || {}, quiz = state.evidence[task.id]?.quiz
-  if (['prediction', 'explanation', 'transfer'].some(key => !fields[key]?.trim())) fail('课程目标还需要判断依据、答案解释和迁移检查方法。小步成果已保存，可继续剩余实践。', 'COURSE_INCOMPLETE', 409)
-  if (!quiz || quiz.correct !== quiz.total) fail('请先完成当前课程单元的检查练习，按反馈纠错后重试。', 'COURSE_INCOMPLETE', 409)
+  if (['prediction', 'explanation', 'transfer'].some(key => !fields[key]?.trim())) fail('课程目标还需要判断依据、结果解释和应用检查方法。小步成果已保存，可继续剩余实践。', 'COURSE_INCOMPLETE', 409)
+  const topicFollowup = task.courseRef.id === 'mit-robotics' && task.courseRef.variant !== 'foundation'
+  if (!topic && !task.topicRef && !topicFollowup && (!quiz || quiz.correct !== quiz.total)) fail('请先完成当前课程单元的检查练习，按反馈纠错后重试。', 'COURSE_INCOMPLETE', 409)
 }
 export function learningModelContext(state, plan) {
   if (!plan) return []

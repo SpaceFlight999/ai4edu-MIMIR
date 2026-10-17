@@ -1,9 +1,10 @@
 import { join } from 'node:path'
 import { randomUUID, createHash } from 'node:crypto'
+import { readFileSync } from 'node:fs'
 import { GrowthStore } from './store.mjs'
 import { AREAS, DEPTHS, RESOURCES, FORUM_SEED } from './catalog.mjs'
 import { activePlan, assessQuiz, adaptShare, confirmDraft, fail, GrowthError, makeDraft, number, reviewStatus, sharePlan, templatePlan, text, validateProfile, validateShare } from './domain.mjs'
-import { evidenceWithModel, feedbackWithModel, planWithModel, generateText, parseModelJson, COACH_SYSTEM } from './model.mjs'
+import { evidenceWithModel, feedbackWithModel, planWithModel, researchDigestWithModel } from './model.mjs'
 import { localShare, sharingCatalog } from './sharing.mjs'
 import { journeysForState, prepareJourneyOperation } from './journey.mjs'
 import { WORKSHOPS, prepareLearning, assessCourseQuiz, checkCourseCompletion } from './learning.mjs'
@@ -20,13 +21,14 @@ import { prepareCustomChoice, researchTopic } from './custom-choices.mjs'
 import { modelCatalog, saveModelSettings } from './model-settings.mjs'
 
 export const name = 'mimir-growth'
+export const GROWTH_VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
 export const inject = ['connection', 'llm', 'agentDefaultModel', 'agents', 'tools', 'systemPrompt']
 export const API_OPERATIONS = ['custom-choice', 'profile', 'generate', 'confirm', 'decline', 'evidence', 'complete', 'quiz', 'feedback', 'review', 'import', 'forum-reply', 'star', 'save-share', 'focus-task', 'check-criterion', 'task-obstacle', 'learning', 'content-concept', 'course-quiz', 'competition-workspace', 'research-digest', 'course-plan', 'course-next', 'robotics-workspace', 'study-workspace']
 
 export function createGrowthService(store, ctx, { researchFetch = fetch } = {}) {
   const running = new Map()
   const research = createResearchFeed(researchFetch)
-  function snapshot() { const state = store.read(); return { ...state, growthVersion: '0.10.0', roboticsTopic: publicRoboticsTopic(), plans: state.plans.map(plan => ({ ...plan, tasks: plan.tasks.map(task => ({ ...task, ...(task.courseRef ? { courseUnit: publicTaskUnit(task) } : {}) })) })), journeys: journeysForState(state), sharingCatalog: sharingCatalog(state), areas: AREAS, depths: DEPTHS, resources: RESOURCES.map(({ quizzes, ...resource }) => ({ ...resource, workshop: WORKSHOPS[resource.id], ...(quizzes ? { quizzes: quizzes.map(({ correct, explanation, hint, ...quiz }) => quiz) } : {}) })), forumSeed: FORUM_SEED, reviewStatus: reviewStatus(state), modelSelection: ctx.agentDefaultModel.currentSelection() } }
+  function snapshot() { const state = store.read(); return { ...state, growthVersion: GROWTH_VERSION, roboticsTopic: publicRoboticsTopic(), plans: state.plans.map(plan => ({ ...plan, tasks: plan.tasks.map(task => ({ ...task, ...(task.courseRef ? { courseUnit: publicTaskUnit(task) } : {}) })) })), journeys: journeysForState(state), sharingCatalog: sharingCatalog(state), areas: AREAS, depths: DEPTHS, resources: RESOURCES.map(({ quizzes, ...resource }) => ({ ...resource, workshop: WORKSHOPS[resource.id], ...(quizzes ? { quizzes: quizzes.map(({ correct, explanation, hint, ...quiz }) => quiz) } : {}) })), forumSeed: FORUM_SEED, reviewStatus: reviewStatus(state), modelSelection: ctx.agentDefaultModel.currentSelection() } }
   async function execute(operation, input, requestSignal) {
     if (!API_OPERATIONS.includes(operation)) fail('未知培养操作。')
     if (!input || typeof input !== 'object' || Array.isArray(input)) fail('请求格式无效。')
@@ -62,10 +64,8 @@ export function createGrowthService(store, ctx, { researchFetch = fetch } = {}) 
     if (['content-concept', 'course-quiz', 'competition-workspace'].includes(operation)) return prepareLibrary(operation, input, before)
     if (operation === 'research-digest') {
       const collection = await research.get(researchTopic(input.topic, before), input.count, signal)
-      const reply = await generateText(ctx, `${COACH_SYSTEM}\n根据提供的论文元数据和摘要片段生成中文阅读概览，不假装读过全文，不推断论文录用或影响力。只返回 JSON：{"overview":"共同主题与阅读建议","items":[{"id":"原文id","summary":"研究问题与方法，150字以内","question":"阅读时需要验证的问题"}]}。每篇必须保留原 id，不能增加论文。`, collection, signal)
-      const parsed = parseModelJson(reply.text)
-      if (!parsed || !Array.isArray(parsed.items) || parsed.items.length !== collection.items.length || new Set(parsed.items.map(item => item.id)).size !== collection.items.length || parsed.items.some(item => !collection.items.some(paper => paper.id === item.id))) fail('研究概览没有对应全部来源，请重试。', 'INVALID_MODEL_OUTPUT', 422)
-      const digest = { overview: text(parsed.overview, '概览', 1800), items: parsed.items.map(item => ({ id: item.id, summary: text(item.summary, '研究摘要', 800), question: text(item.question, '阅读问题', 500) })), model: reply.model, collection, at: new Date().toISOString() }
+      const { digest: output, model } = await researchDigestWithModel(ctx, collection, signal)
+      const digest = { ...output, model, collection, at: new Date().toISOString() }
       return state => { state.researchDigests[input.topic] = digest; return digest }
     }
     if (operation === 'learning') return prepareLearning(input, before)
@@ -102,7 +102,7 @@ export function createGrowthService(store, ctx, { researchFetch = fetch } = {}) 
         const done = activePlan(before).tasks.filter((t) => before.evidence[t.id]?.status === 'completed').length
         output.rationale = `本地规则复盘：当前阶段已确认完成${done}项任务。按你本次明确填写的配置重新安排；尚未调用模型评估成果。`
       }
-      return (state) => { const draft = makeDraft(state, output, { ...courseReview, profile, mode: input.mode, advance, source: operation }); if (model) draft.model = model; return draft }
+      return (state) => { const draft = makeDraft(state, output, { ...courseReview, profile, mode: input.mode, advance, source: operation, importedChoices: shared?.tasks.filter(task => task.studyChoice).map(task => task.studyChoice) || [] }); if (model) draft.model = model; return draft }
     }
     if (operation === 'confirm') return (state) => confirmDraft(state, text(input.planId, '候选方案标识', 128))
     if (operation === 'decline') return (state) => { const plan = state.plans.find((p) => p.id === input.planId); if (!plan || plan.status !== 'draft') fail('候选方案已失效。', 'STALE_DRAFT', 409); plan.status = 'declined' }

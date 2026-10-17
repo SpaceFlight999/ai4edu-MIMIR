@@ -21,12 +21,12 @@ export function studyFoundation(topic, variant = 'foundation') {
   const studyChoice = topic.custom ? { id: topic.id, label: '深入学习主题', title: topic.title, detail: topic.detail, source: topic.source } : undefined
   return { title: topic.title + ' · ' + ({ foundation: '建立理解', transfer: '成果迁移', deepen: '比较与验证', support: '补齐基础' })[variant], unitKey: 'course:' + topic.id + ':' + variant, courseRef: { id: topic.id, variant }, ...(studyChoice ? { studyChoice } : {}), studyTopic: topic,
     course: { id: topic.id, title: topic.title, url: topic.source, provider: topic.custom ? '我的补充来源' : 'MIMIR 原创专题 · 外部资料参考', concepts: [] }, guide: topic.detail + '\n' + topic.formula,
-    objective: '围绕' + topic.title + '完成先修检查、三个对照验证并整理可复查的分析报告。', questions: topic.diagnosis,
-    criteria: ['完成三项先修检查并写下依据', '完成本单元检查题并解释', '保存基础、参考和自选三个验证记录', '整理应用与验证边界'],
+    objective: '围绕' + topic.title + '记录学习问题、完成三个对照验证并整理可复查的分析报告。', questions: topic.diagnosis,
+    criteria: ['记录学习问题与判断依据', '解释验证结果与差异', '保存基础、参考和自选三个验证记录', '整理应用与验证边界'],
     workshop: { title: topic.title + ' · 从理解到验证', blocks: [
-      { title: '检查先修，明确问题', guide: topic.detail + '\n' + topic.formula, hint: topic.custom ? '这里检查验证方法；专业先修内容由你补充并查证。' : '先回答三项基础检查，按提示纠错。', studyLab: 'diagnosis', fields: [field('prediction', '我的判断与先修依据', '说明学习问题、先修知识与判断理由。')] },
-      { title: '预测、验证与比较', guide: topic.formula, hint: topic.boundary, studyLab: 'trials', lab: 'course-quiz', fields: [field('explanation', '我的解释与纠错', '用三个保存的验证记录解释结果。')] },
-      { title: '整理报告，说明应用', guide: topic.boundary, hint: '从保存记录生成草稿，继续编辑自己的分析。', fields: [field('transfer', '应用场景与检查方法', '注明来源、条件、适用范围和待验证内容。')] },
+      { title: '明确学习问题', hint: '打开来源材料，记录这次想解决的问题与自己的判断。', fields: [field('prediction', '我的问题与判断依据', '说明学习问题、参考材料与判断理由。')] },
+      { title: '预测、验证与比较', hint: topic.boundary, studyLab: 'trials', fields: [field('explanation', '我的验证分析', '用三个保存的验证记录解释结果。')] },
+      { title: '整理报告，说明应用', hint: '从保存记录生成草稿，继续编辑自己的分析。', fields: [field('transfer', '应用场景与检查方法', '注明来源、条件、适用范围和待验证内容。')] },
     ] } }
 }
 export function publicStudyUnit(unit) { return { ...unit, studyTopic: { ...unit.studyTopic, diagnosis: unit.studyTopic.diagnosis.map(({ correct, explanation, ...item }) => item) }, questions: unit.questions.map(({ correct, explanation, ...item }) => item) } }

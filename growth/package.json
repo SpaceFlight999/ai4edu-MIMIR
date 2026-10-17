@@ -1,6 +1,6 @@
 {
   "name": "@mimir/growth-layer",
-  "version": "0.12.7",
+  "version": "0.12.10",
   "description": "MIMIR personal growth coach and learning journey",
   "type": "module",
   "main": "./src/host.mjs",

@@ -1,4 +1,4 @@
-function ModelControls({ selection, disabled, onSaved }) {
+function ModelControls({ selection, disabled, onSaved, onConfigureProviders }) {
   const [catalog, setCatalog] = useState(null), [providerId, setProviderId] = useState(''), [modelId, setModelId] = useState('');
   const [keyValue, setKeyValue] = useState(''), [pending, setPending] = useState(false), [message, setMessage] = useState(''), [error, setError] = useState('');
   const request = useRef(null), saving = useRef(false);
@@ -32,7 +32,7 @@ function ModelControls({ selection, disabled, onSaved }) {
     h('div', { className: 'mg-form-pair' }, field('模型供应商', h('select', { value: providerId, disabled: locked, 'data-model-provider': true, onChange: event => { const next = catalog.providers.find(item => item.id === event.target.value); setProviderId(event.target.value); setModelId(next?.models[0]?.id || ''); setKeyValue(''); setMessage(''); } }, h('option', { value: '' }, '请选择供应商'), ...(catalog?.providers || []).map(item => h('option', { key: item.id, value: item.id }, item.name)))),
       field('选择模型', h('select', { value: modelId, disabled: locked, 'data-model-id': true, onChange: event => { setModelId(event.target.value); setMessage(''); } }, h('option', { value: '' }, '请选择模型'), modelId && !provider?.models.some(item => item.id === modelId) && h('option', { value: modelId, disabled: true }, modelId + '（当前目录不可用）'), ...(provider?.models || []).map(item => h('option', { key: item.id, value: item.id }, item.name + (item.name !== item.id ? ' · ' + item.id : '')))))),
     field('API Key', textInput(keyValue, setKeyValue, { type: 'password', autoComplete: 'new-password', maxLength: 4096, disabled: locked || !provider?.credential?.writable, 'data-model-key': true, placeholder: provider?.credential?.configured ? '已配置；留空保留，输入新 Key 可更换' : '输入此供应商的 API Key' }), provider?.credential ? (provider.credential.configured ? '已配置凭据' : '尚未配置凭据') + (provider.credential.writable ? '；仅保存在本机 DSH 凭据服务。' : '；当前来源只读，请修改对应供应商配置。') : '此供应商未提供可编辑的 Key 入口。'),
-    h('div', { className: 'mg-actions' }, button(pending ? '正在处理…' : '保存模型与 Key', save, { className: 'mg-primary', disabled: locked || !modelId || !provider?.models.some(item => item.id === modelId) })),
+    h('div', { className: 'mg-actions' }, button(pending ? '正在处理…' : '保存模型与 Key', save, { className: 'mg-primary', disabled: locked || !modelId || !provider?.models.some(item => item.id === modelId) }), onConfigureProviders && button('配置提供商', onConfigureProviders, { className: 'mg-secondary', disabled: locked, 'data-configure-providers': true })),
     h('small', null, '研究、成长方案和学习反馈共用此模型。Key 需来自所选供应商。'),
     error && h('p', { className: 'mg-inline-error', role: 'alert' }, error), message && h('p', { role: 'status' }, message));
 }
@@ -48,19 +48,24 @@ function ResearchModelEntry() {
 }
 // The product has its own Settings dialog rather than rendering DSH's section slot.
 // Extend its model section through a portal; the original appearance page stays owned by the product.
-function NativeModelBridge() {
-  const [target, setTarget] = useState(null);
+function NativeModelBridge({ renderSlot }) {
+  const [target, setTarget] = useState(null), [configureProviders, setConfigureProviders] = useState(false);
   useEffect(() => {
     let node;
     const sync = () => {
       const section = document.querySelector('.mimir-settings-dialog .mimir-preferences[aria-label="模型选择"]');
       if (section && node?.parentElement === section) return;
-      node?.remove(); node = null;
+      node?.remove(); node = null; setConfigureProviders(false);
       if (section) { node = document.createElement('div'); node.dataset.mimirModelControls = 'true'; section.appendChild(node); }
       setTarget(node);
     };
     const observer = new MutationObserver(sync); observer.observe(document.body, { childList: true, subtree: true }); sync();
     return () => { observer.disconnect(); node?.remove(); };
   }, []);
-  return target ? createPortal(h(ModelControls), target) : null;
+  const returnToModels = () => { setConfigureProviders(false); window.dispatchEvent(new CustomEvent('mimir-model-changed')); };
+  return target ? createPortal(configureProviders
+    ? h('section', { 'aria-label': '提供商配置', 'data-native-provider-settings': true },
+      h('div', { className: 'mg-actions' }, button('返回模型选择', returnToModels, { className: 'mg-secondary' })),
+      renderSlot('settings.section', { close: returnToModels }, { only: 'models' }))
+    : h(ModelControls, { onConfigureProviders: () => setConfigureProviders(true) }), target) : null;
 }

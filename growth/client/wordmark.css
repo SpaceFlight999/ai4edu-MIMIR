@@ -1,0 +1,16 @@
+.mg-wordmark-name mimir-wordmark{display:block;min-height:44px}
+.mg-app .mg-wordmark-button{min-height:44px;min-width:0;max-width:100%;padding:0;flex-shrink:1}
+.mg-app .mg-wordmark{flex-direction:column;align-items:flex-end;gap:0;letter-spacing:normal;max-width:100%}
+.mg-app .mg-wordmark-name{display:block;width:clamp(209px,21.85vw,285px);max-width:100%;min-width:0;flex-shrink:1}
+.mg-app .mg-wordmark-name{order:0}
+.mg-app .mg-wordmark-meta{position:absolute;right:4px;bottom:3px;z-index:1;display:flex;flex-direction:row;align-items:baseline;justify-content:flex-end;gap:8px;margin:0;padding:0;flex-shrink:0;font-size:10px;line-height:1.5;letter-spacing:.04em;text-align:right;white-space:nowrap}
+.mg-app .mg-wordmark-version{font-size:10px;letter-spacing:.04em;font-variant-numeric:tabular-nums;color:var(--mg-muted)}
+.mg-app .mg-topbar{position:relative;padding-block-start:12px}
+.mg-app .mg-topbar nav{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));width:min(640px,60%);min-width:0;gap:6px;align-self:center;margin-top:0}
+.mg-app .mg-topbar nav button{min-width:0;min-height:66px;padding:10px 8px}
+.mg-app .mg-topbar nav button>span{align-items:center;justify-content:center;min-height:42px;gap:5px;font-size:14px;font-weight:700;line-height:1.35;white-space:nowrap}
+.mg-app .mg-topbar nav button small{font-size:10px;font-weight:400;line-height:1.4;letter-spacing:.02em}
+.mg-app .mg-topbar nav button.is-active:after{bottom:-6px;left:32%;right:32%}
+@media(max-width:1050px){.mg-app .mg-topbar nav{width:100%;flex-basis:100%}}
+@media(max-width:720px){.mg-app .mg-topbar{padding-block-start:10px}.mg-app .mg-wordmark-button{flex-shrink:0}.mg-app .mg-topbar nav{align-self:auto;flex:0 0 auto;grid-template-columns:repeat(5,minmax(98px,1fr));gap:4px}.mg-app .mg-topbar nav button>span{font-size:12px}.mg-app .mg-topbar nav button small{font-size:9px}}
+@media(max-width:480px){.mg-app .mg-wordmark-name{width:clamp(171px,52.25vw,209px)}.mg-app .mg-wordmark-meta{gap:6px}}

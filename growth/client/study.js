@@ -1,21 +1,16 @@
 function StudyTopicCatalog({ library, state, busy, onCourse, onAdd, onManage }) {
-  const topics = [{ id: 'mit-robotics', title: '二连杆机械臂运动学分析', detail: '三项先修检查、角度预测与仿真验证、运动学分析报告。', topicRef: 'planar-2r-v1' }, ...(library.studyTopics || [])];
-  return h('section', { className: 'mg-study-catalog', 'aria-label': '深入学习主题与补充' }, h('p', null, '从先修诊断到算例验证，再将思考整理为自己的分析报告。沿用当前成长时间预算。'),
+  const topics = [{ id: 'mit-robotics', title: '二连杆机械臂运动学分析', detail: '角度预测与仿真验证、运动学分析报告。', topicRef: 'planar-2r-v1' }, ...(library.studyTopics || [])];
+  return h('section', { className: 'mg-study-catalog', 'aria-label': '深入学习主题与补充' }, h('p', null, '围绕一个学习问题开展算例验证，再将思考整理为自己的分析报告。沿用当前成长时间预算。'),
     h(MoreChoices, { label: '深入学习主题', items: topics, customItems: state.customChoices || [], customSelections: state.customChoiceSelections || {}, onAdd, onManage, onUse: item => onCourse(item.id), disabled: busy, className: 'mg-study-topic-grid', renderItem: item => h('article', { key: item.id, 'data-study-topic': item.id }, h('h3', null, item.title), h('p', null, item.detail), button(item.id === 'mit-robotics' ? '开始运动学专题 →' : '开始此专题 →', () => onCourse(item.id, 'foundation', item.topicRef), { className: 'mg-primary', disabled: busy })) }),
     h('small', null, '内置专题计算是理想模型；自定义专题记录自己的实验对照。已有方案与成果保留，确认候选后才切换。'));
 }
 function studyReport(task, topic, session) {
   if (!session?.trials.length) return '';
-  return '# ' + topic.title + ' · 分析报告\n\n来源：' + (topic.source || '自己的学习材料，待补充出处') + '\n\n方法：' + topic.formula + '\n\n先修检查：' + (session.diagnosis?.correct || 0) + '/3\n\n' + session.trials.map((trial, index) => '## 算例 ' + (index + 1) + ' · ' + ({ basic: '基础', reference: '参考', custom: '自选' })[trial.kind] + '\n\n' + (trial.selfReported ? '输入与条件：' + trial.conditions + '\n预期：' + trial.prediction + '\n观察：' + trial.observation + '\n对照结论（自报）：' + trial.conclusion : '输入：' + JSON.stringify(trial.parameters) + '\n预测：' + trial.prediction.join('，') + '\n后台计算：' + trial.actual.join('，') + '\n误差：' + trial.errors.join('，') + '\n检查：' + (trial.passed ? '一致' : '需调整') + '\n阈值：' + trial.tolerance)).join('\n\n') + '\n\n## 方法边界\n\n' + topic.boundary + '\n\n## 我的解释与应用\n';
+  return '# ' + topic.title + ' · 分析报告\n\n来源：' + (topic.source || '自己的学习材料，待补充出处') + '\n\n方法：' + topic.formula + '\n\n' + session.trials.map((trial, index) => '## 算例 ' + (index + 1) + ' · ' + ({ basic: '基础', reference: '参考', custom: '自选' })[trial.kind] + '\n\n' + (trial.selfReported ? '输入与条件：' + trial.conditions + '\n预期：' + trial.prediction + '\n观察：' + trial.observation + '\n对照结论（自报）：' + trial.conclusion : '输入：' + JSON.stringify(trial.parameters) + '\n预测：' + trial.prediction.join('，') + '\n后台计算：' + trial.actual.join('，') + '\n误差：' + trial.errors.join('，') + '\n检查：' + (trial.passed ? '一致' : '需调整') + '\n阈值：' + trial.tolerance)).join('\n\n') + '\n\n## 方法边界\n\n' + topic.boundary + '\n\n## 我的解释与应用\n';
 }
 function exportStudyReport(report, title) {
   const url = URL.createObjectURL(new Blob([report], { type: 'text/markdown;charset=utf-8' })), link = document.createElement('a');
   link.href = url; link.download = 'MIMIR-' + title.replace(/[\\/:*?"<>|]/g, '-') + '-分析.md'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
-}
-function StudyPrerequisites({ task, topic, session, fields, update, disabled, onRun }) {
-  const answers = topic.diagnosis.map((_, index) => fields['studyDiag' + index] !== undefined ? Number(fields['studyDiag' + index]) : session?.diagnosis?.answers[index] ?? -1);
-  return h('section', { className: 'mg-robot-diagnosis', 'aria-label': '专题先修检查' }, h('h3', null, '先检查三项基础'), ...topic.diagnosis.map((item, index) => h('fieldset', { key: index }, h('legend', null, item.question), ...item.options.map((option, answer) => h('label', { key: answer }, h('input', { type: 'radio', name: 'study-' + task.id + '-' + index, checked: answers[index] === answer, disabled, 'data-study-diagnosis': index + '-' + answer, onChange: () => update({ ['studyDiag' + index]: String(answer) }) }), option)))),
-    button('检查先修并保存', () => onRun({ action: 'diagnosis', answers }), { className: 'mg-secondary', disabled: disabled || answers.some(value => value < 0) }), session?.diagnosis && h('div', { role: 'status' }, ...session.diagnosis.feedback.map((item, index) => h('p', { key: index }, (item.passed ? '✓ ' : '再想想：') + item.text))));
 }
 function StudyWorkbench({ topic, session, fields, update, disabled, onRun }) {
   const kind = fields.studyCase || 'reference', title = { basic: '基础', reference: '参考', custom: '自选' };

@@ -59,3 +59,50 @@
 #guide-result>article,#answers>article{padding:16px 0;border-bottom:1px solid var(--border)}
 #guide-result>article>small,#answers>article>small,#research-result>small{display:block;color:var(--muted);line-height:1.6}
 @media(max-width:700px){.paper-access,.paper-tabs{padding-inline:12px}.paper-access small{flex-basis:100%}.paper-tab{max-width:230px}.paper-tab>button:first-child{max-width:185px}}
+
+/* Keep document tabs at the top and give the remaining viewport to the paper. */
+body.paper-reader{display:flex;flex-direction:column;height:100dvh;min-height:0;overflow:hidden}
+.paper-reader header{padding:0;gap:0;align-items:stretch;flex-direction:row;min-height:44px;flex-shrink:0;box-shadow:none}
+.paper-reader header h1{flex-shrink:0;align-self:center;padding:10px 16px;font-size:18px;line-height:24px;letter-spacing:0}
+.paper-reader .paper-tabs{flex:1;min-width:0;min-height:44px;margin:0;padding:0;border:0;align-items:stretch}
+.paper-reader .paper-tab{max-width:320px;border-top:0;border-radius:0}
+.paper-reader .paper-tab>button:first-child{max-width:270px}
+.paper-reader .current-paper-title{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.paper-reader .paper-access{gap:6px 12px;padding:4px 10px;min-height:40px}
+.paper-reader .paper-access small{margin-left:auto}
+.paper-reader .workspace{position:relative;flex:1;min-height:0;height:auto;min-width:0}
+.paper-reader .reader{min-height:0;height:auto;min-width:0}
+.paper-reader .toolbar{padding:4px 8px;gap:6px;flex-shrink:0}
+.paper-reader .toolbar label{display:flex;align-items:center;gap:5px}
+.paper-reader .toolbar input,.paper-reader .toolbar select{margin-top:0;padding:6px;min-height:34px}
+.paper-reader #paper-view{min-height:0;padding:10px;overscroll-behavior:contain}
+.paper-reader #empty{margin:12vh auto}
+.paper-reader .selection-bar{padding:4px 10px;gap:6px;align-items:center;flex-shrink:0}
+.paper-reader #selection-status{width:auto;flex:1;min-width:160px;margin:0;min-height:0}
+.paper-reader #limitations{margin:0;flex-shrink:0}
+.paper-reader #limitations:empty{display:none}
+.paper-reader .reader-footer{display:flex;flex-shrink:0;align-items:center;gap:12px;padding:4px 10px;border-top:1px solid var(--border);background:var(--surface)}
+.paper-reader #status{flex:1;min-width:0;min-height:0;max-height:3.2em;overflow:auto;padding:0;border:0;background:transparent;overflow-wrap:anywhere}
+.paper-reader .reader-footer .actions{flex-shrink:0;width:auto}
+.paper-reader #settings{flex-shrink:0;max-height:35dvh;overflow:auto;padding:6px 10px}
+.paper-reader .workspace.show-library .library{top:0}
+@media(max-width:1100px){.paper-reader .paper-access small{display:none}}
+@media(min-width:701px) and (max-width:900px){.paper-reader .workspace,.paper-reader .workspace.library-collapsed{display:grid;grid-template-columns:minmax(0,1fr) 290px}.paper-reader .workspace.analysis-collapsed,.paper-reader .workspace.library-collapsed.analysis-collapsed{grid-template-columns:minmax(0,1fr)}.paper-reader .analysis{min-height:0;overflow:auto;border-top:0;border-left:1px solid var(--border);padding:12px}.paper-reader .toolbar{justify-content:flex-start}}
+@media(max-width:700px){body.paper-reader{height:auto;min-height:100dvh;overflow:auto}.paper-reader header{gap:0}.paper-reader header h1{padding:10px 12px;font-size:16px}.paper-reader .paper-tab{max-width:220px}.paper-reader .paper-tab>button:first-child{max-width:175px}.paper-reader .paper-access{gap:6px 10px}.paper-reader .workspace{display:flex;flex:none;flex-direction:column}.paper-reader .reader{height:72dvh;min-height:320px}.paper-reader .analysis{overflow:visible}.paper-reader .reader-footer{position:sticky;bottom:0;z-index:25;flex-wrap:wrap;gap:4px}.paper-reader #status{flex-basis:100%}.paper-reader .reader-footer .actions{width:100%}.paper-reader .actions button,.paper-reader .toolbar button,.paper-reader .paper-tab>button{min-height:44px}.paper-reader #selection-status{flex-basis:100%}.paper-reader .selection-bar button{min-height:40px}}
+@media(min-width:701px) and (max-width:900px){.paper-reader .toolbar{font-size:12px;gap:4px}.paper-reader .toolbar button{min-height:32px;padding:4px 6px}.paper-reader .toolbar #page{width:44px}.paper-reader .toolbar select{width:86px}.paper-reader .selection-bar button{min-height:32px;padding:4px 6px}.paper-reader #selection-status{flex-basis:100%;max-height:20px}.paper-reader #limitations{max-height:40px}}
+
+/* Compact result navigation and a single, recognisable purple thinking region. */
+.thinking-panel{position:sticky;top:42px;z-index:9;margin:10px 0;padding:10px 12px;border:1px solid #b8a2df;border-left:4px solid #7952b8;border-radius:8px;background:#f4effc;color:#513477;box-shadow:0 3px 12px #7952b812}
+.thinking-task{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 12px;align-items:center;padding:3px 0}
+.thinking-task strong{font-size:12px}.thinking-time{font-weight:650;font-variant-numeric:tabular-nums;font-size:15px}.thinking-task small{grid-column:2;color:#685180;line-height:1.5}
+:root[data-mimir-mode=dark] .thinking-panel{background:#2d233e;border-color:#8062ac;color:#dec8ff;box-shadow:none}:root[data-mimir-mode=dark] .thinking-task small{color:#c2acd9}
+.reader-disclosure,.compact-metadata,.result-titles{margin:10px 0;padding:8px 10px;border:1px solid var(--border);border-radius:6px;min-width:0}
+.reader-disclosure>summary,.compact-metadata>summary,.title-overflow>summary{font-size:13px;line-height:1.6;min-height:24px;list-style:disclosure-closed}
+.reader-disclosure[open]>summary,.compact-metadata[open]>summary,.title-overflow[open]>summary{list-style:disclosure-open;margin-bottom:8px}
+.compact-metadata{padding:4px 8px}.compact-metadata>summary{font-size:12px;color:var(--muted)}.compact-metadata p,.compact-metadata small{white-space:pre-wrap;overflow-wrap:anywhere}
+.result-titles{display:flex;flex-direction:column;gap:4px;background:var(--surface)}
+.result-title-link{display:block;width:100%;text-align:left;min-height:32px;padding:5px 8px;color:var(--accent);font-size:13px;line-height:1.5;border-color:transparent;white-space:normal;overflow-wrap:anywhere}
+.title-overflow{margin:2px 0 0;padding:4px 8px;border-top:1px solid var(--border)}
+.claim,.map-node,[id^=reader-section],.note{scroll-margin-top:110px}
+.note>details{margin:0}.note>details>summary{font-size:14px;overflow-wrap:anywhere}.note pre{line-height:1.7}
+@media(max-width:700px){.thinking-panel{position:static}.thinking-task{grid-template-columns:minmax(0,1fr)}.thinking-task small{grid-column:1}.result-title-link{min-height:44px}}
