@@ -9,11 +9,28 @@ export function headingTarget(node,prefix='reader-section') {
   return node;
 }
 
+export function scrollWithinAnalysis(node,{focus=false}={}) {
+  const pane=node?.closest('#research-analysis');
+  if(!pane||!node.getClientRects().length)return false;
+  const tabs=pane.querySelector(':scope > .tabs');
+  let inset=(tabs?.getBoundingClientRect().height??0)+12;
+  const thinking=pane.querySelector(':scope > .thinking-panel');
+  if(thinking?.getClientRects().length){
+    const style=getComputedStyle(thinking);
+    if(style.position==='sticky')inset=Math.max(inset,Math.max(0,parseFloat(style.top)||0)+thinking.getBoundingClientRect().height+(parseFloat(getComputedStyle(pane).paddingTop)||0)+12);
+  }
+  const top=Math.max(0,pane.scrollTop+node.getBoundingClientRect().top-pane.getBoundingClientRect().top-pane.clientTop-inset);
+  // scrollIntoView also scrolls hidden ancestors and embedding frames. Only
+  // this pane owns navigation; document, PDF and host app positions stay put.
+  pane.scrollTo({top,left:pane.scrollLeft,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
+  if(focus){node.tabIndex=-1;node.focus({preventScroll:true});}
+  return true;
+}
+
 export function jumpToSection(node) {
   if(node.tagName==='DETAILS')node.open=true;
   for(let parent=node.parentElement;parent;parent=parent.parentElement)if(parent.tagName==='DETAILS')parent.open=true;
-  node.scrollIntoView({block:'start',behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-  node.tabIndex=-1;node.focus({preventScroll:true});
+  return scrollWithinAnalysis(node,{focus:true});
 }
 
 export function titleNavigation(el,button,items,label='标题导航') {

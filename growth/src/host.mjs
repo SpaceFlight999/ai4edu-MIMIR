@@ -18,7 +18,8 @@ import { publicRoboticsTopic } from './robotics-topic.mjs'
 import { STUDY_TOPICS, prepareStudy } from './study-topics.mjs'
 import { taskCourseUnit } from './course-catalog.mjs'
 import { prepareCustomChoice, researchTopic } from './custom-choices.mjs'
-import { modelCatalog, saveModelSettings } from './model-settings.mjs'
+import { modelCatalog, modelInfo, modelSelection, saveModelSettings } from './model-settings.mjs'
+export { modelCatalog, modelInfo, modelSelection, saveModelSettings }
 
 export const name = 'mimir-growth'
 export const GROWTH_VERSION = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version
@@ -180,7 +181,8 @@ export async function apply(ctx) {
   }
   register('state', ['GET'], () => service.snapshot())
   register('models', ['GET'], request => modelCatalog(ctx, request.signal))
-  register('model-selection', ['GET'], () => { const current = ctx.agentDefaultModel.currentSelection(); return { provider: current.provider || '', model: current.model || '' } })
+  register('model-selection', ['GET'], request => modelSelection(ctx, request.signal))
+  register('model-info', ['POST'], async request => modelInfo(ctx, await body(request), request.signal))
   register('model-settings', ['POST'], async request => saveModelSettings(ctx, await body(request), request.signal))
   register('library', ['GET'], () => service.library())
   register('materials', ['GET'], request => { const url = new URL(request.url); return service.materials(url.searchParams.get('core'), url.searchParams.get('keyword') || '', Number(url.searchParams.get('count') || 5), request.signal) })

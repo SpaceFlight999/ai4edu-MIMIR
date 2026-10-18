@@ -1,0 +1,20 @@
+/* Only the active model entry uses a blue version pill. Settings/menus use text. */
+:root{--mimir-model-blue:#244fbb;--mimir-model-blue-bg:#e8efff}
+:root[data-theme="dark"],.dark,[data-mimir-mode="dark"],[data-mimir-theme="dark"],[data-theme="dark"]{--mimir-model-blue:#9bbaff;--mimir-model-blue-bg:#29374f}
+.mimir-model-identity{display:inline-flex;align-items:center;gap:7px;min-width:0;max-width:100%;flex-wrap:wrap;vertical-align:middle}
+.mimir-model-name{min-width:0;overflow-wrap:anywhere;font-weight:500}
+.mimir-model-badge{display:inline-flex;align-items:center;flex:none;white-space:nowrap;border-radius:999px;padding:2px 9px;background:var(--mimir-model-blue-bg);color:var(--mimir-model-blue);font-size:12px;font-weight:650;line-height:1.65;font-variant-numeric:tabular-nums}
+.mimir-model-version-text{color:inherit;background:none;padding:0;border:0;white-space:nowrap;font:inherit;font-variant-numeric:tabular-nums}
+.mimir-model-effort,.mimir-model-provider{color:var(--mimir-muted,#637083);font-size:12px;white-space:nowrap}
+.mimir-model-preview{display:flex;flex-direction:column;align-items:flex-start;gap:7px;margin:0 0 16px;padding:12px 0;border-block:1px solid var(--mg-line);overflow-wrap:anywhere}
+.mimir-model-preview>small{color:var(--mg-muted);font-size:12px}
+.mimir-model-entry.mg-research-model-entry{display:inline-flex;align-items:center;gap:8px;max-width:min(440px,100%);min-height:36px;text-align:left;font-size:13px!important}
+.mimir-model-entry:focus-visible{outline:2px solid var(--mimir-model-blue);outline-offset:3px}
+.mimir-session-model{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-width:0}
+.mimir-session-model .mimir-model-identity{flex-wrap:nowrap}
+.mimir-session-model .mimir-model-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mimir-model-configure{border:0;border-radius:6px;background:transparent;color:var(--mimir-model-blue);font-size:11px;min-width:32px;min-height:32px;cursor:pointer}
+.mimir-model-configure:focus-visible{outline:2px solid currentColor;outline-offset:2px}
+.mimir-model-configure:disabled{opacity:.5;cursor:default}
+.mg-provider-protocol-help{font-size:12px;line-height:1.7;color:var(--mimir-muted);overflow-wrap:anywhere}
+@media(max-width:480px){.mimir-model-entry.mg-research-model-entry{max-width:100%}.mimir-model-badge{padding-inline:8px}}

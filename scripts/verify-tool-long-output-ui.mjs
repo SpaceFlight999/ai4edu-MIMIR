@@ -1,13 +1,12 @@
 // Real UI acceptance. No provider fixture, model credential, personal data, or backend substitute.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { randomUUID, createHash } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { resolve, join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { connectBrowser } from './cdp.mjs'
-import { longPaperFixture } from './long-paper-fixture.mjs'
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const runId = randomUUID(), home = join(project, '.test-data', 'editor-tool-ui-' + runId)
@@ -62,32 +61,12 @@ async function key(key, code, extra = {}) {
   await browser.send('Input.dispatchKeyEvent', { type: 'keyUp', key, code, ...extra })
   await delay(80)
 }
-async function appendEditor(text, paragraph = false) {
-  const point = await browser.evaluate("(()=>{const e=document.querySelector('.mimir-paper .tiptap'),n=[...e.querySelectorAll('p,h1,h2,h3')].at(-1)??e;n.scrollIntoView({block:'center'});const range=document.createRange();range.selectNodeContents(n);range.collapse(false);const r=range.getBoundingClientRect(),b=n.getBoundingClientRect();return{x:r.height?r.x:b.x+5,y:r.height?r.y+r.height/2:b.y+b.height/2}})()");
-  await browser.send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...point});
-  await browser.send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...point});
-  await delay(150);
-  await key('End','End',{windowsVirtualKeyCode:35})
-  if (paragraph) await key('Enter', 'Enter', { text: '\r', windowsVirtualKeyCode: 13 })
-  await browser.send('Input.insertText', { text })
-  await delay(100)
-}
-async function editorText() { return browser.evaluate("document.querySelector('.mimir-paper .tiptap').innerText.trim()") }
 async function sample(name, run) {
   const check = { name, passed: false }, start = Date.now(); report.checks.push(check)
   try { check.evidence = await run(); check.passed = true }
   catch (error) { check.error = { name: error.name, message: error.message.slice(0, 400) }; await snapshot('failure-' + name).catch(() => {}) }
   check.seconds = Math.round((Date.now() - start) / 1000); save()
   console.log((check.passed ? 'PASS ' : 'FAIL ') + name)
-}
-async function downloaded(extension, before) {
-  await wait(() => readdirSync(downloads).some(name => !before.has(name) && name.endsWith(extension) && statSync(join(downloads, name)).size > 0), 30000)
-  const name = readdirSync(downloads).find(name => !before.has(name) && name.endsWith(extension))
-  const path = resolve(downloads, name); assert.equal(dirname(path), downloads)
-  const bytes = readFileSync(path)
-  const evidence = { name, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), realUIDownload: true }
-  report.downloads.push(evidence)
-  return { evidence, text: bytes.toString('utf8') }
 }
 async function closeBrowser() {
   if (!browserPort || !edge || edge.exitCode !== null) return

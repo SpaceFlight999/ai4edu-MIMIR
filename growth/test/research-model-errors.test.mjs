@@ -38,16 +38,23 @@ test('a thinking response that exhausts output tokens produces a specific truste
   const api=transport(),llm={prepareCall:async options=>({config:options,stream:async function*(){yield{type:'finish',reason:{kind:'max-tokens'}};}})};
   await assert.rejects(api.callModel(llm,{provider:'fixture',model:'fixture'},'{}',undefined,'JSON only'),error=>error.code==='MODEL_OUTPUT_LIMIT'&&api.isTrusted(error));
 });
+test('exhausted shared output reductions retain a safe limit category in paper and growth tasks',async()=>{
+  const error=transport().safeModelFailure({code:'MODEL_OUTPUT_LIMIT',message:'private upstream sk-secret'});
+  assert.equal(error.code,'MODEL_OUTPUT_LIMIT');assert.match(error.message,/自动缩减/);assert.doesNotMatch(error.message,/upstream|sk-secret/);
+  const {growthFailure}=await import('../src/dsh-agent.mjs');
+  assert.equal(growthFailure(error).code,'MODEL_OUTPUT_LIMIT');assert.match(growthFailure(error).message,/自动缩减/);
+});
 test('the per-call timeout is classified instead of becoming an opaque adapter error',async()=>{
   const api=transport(true),llm={prepareCall:()=>new Promise(()=>{})};
   await Promise.all([assert.rejects(api.callModel(llm,{provider:'fixture',model:'fixture'},'{}',undefined,'JSON only'),error=>error.code==='MODEL_TIMEOUT'&&api.isTrusted(error)),new Promise(done=>setTimeout(done,25))]);
 });
-test('concise research transport avoids the high-reasoning output exhaustion fixture',async()=>{
+test('concise research transport honors high effort and reports exhaustion; explicit low still completes',async()=>{
   const api=transport(),choice={provider:'fixture',model:'fixture',reasoningEffort:'high'};let selected;
   const llm={resolveModelInfo:async()=>({reasoning:{efforts:[{id:'low'},{id:'high'}]}}),prepareCall:async options=>({config:options,stream:async function*(){
     if(options.reasoningEffort==='high'){yield{type:'finish',reason:{kind:'max-tokens'}};return;}
     yield{type:'text-delta',text:'{"draft":[]}'};yield{type:'finish',reason:{kind:'stop'}};
   }})};
-  const result=await api.callModel(llm,choice,'{}',undefined,'JSON only',{concise:true,maxTokens:16384,onConfig:options=>selected=options});
+  await assert.rejects(api.callModel(llm,choice,'{}',undefined,'JSON only',{concise:true,maxTokens:16384}),error=>error.code==='MODEL_OUTPUT_LIMIT');
+  const result=await api.callModel(llm,{...choice,reasoningEffort:'low'},'{}',undefined,'JSON only',{concise:true,maxTokens:16384,onConfig:options=>selected=options});
   assert.equal(JSON.stringify(result),'{"draft":[]}');assert.equal(selected.reasoningEffort,'low');assert.equal(selected.maxTokens,16384);assert.equal(choice.reasoningEffort,'high');
 });

@@ -1,4 +1,5 @@
 // Narrow, idempotent patches to the partner bundle; no visual layout replacement.
+import { readFileSync } from 'node:fs'
 function replaceOnce(source, before, after) {
   if (source.includes(before)) {
     if (source.split(before).length !== 2) throw new Error('Ambiguous workbench functional patch')
@@ -8,6 +9,36 @@ function replaceOnce(source, before, after) {
   return source
 }
 export function patchWorkbenchFunctions(source) {
+  if (!source.includes('/* MIMIR_DOCUMENT_TITLE_STATE */')) {
+    const start = source.indexOf('function Fhe('), end = source.indexOf('function Bhe(', start);
+    if (start < 0 || end < start) throw new Error('Document title scope not found');
+    let scope = source.slice(start, end);
+    if ((scope.match(/r\.title/g) || []).length !== 7) throw new Error('Document title references changed');
+    scope = scope.replaceAll('r.title', 'mimirDocumentTitle');
+    scope = replaceOnce(scope,
+      'onOpenModelSettings:i}){let s=e.source',
+      'onOpenModelSettings:i}){/* MIMIR_DOCUMENT_TITLE_STATE */const[mimirDocumentTitle,mimirSetDocumentTitle]=q.useState(r.title),[mimirRenaming,mimirSetRenaming]=q.useState(false),mimirRenameBusy=q.useRef(false);let s=e.source');
+    scope = replaceOnce(scope,
+      '(0,w.jsx)("h1",{children:mimirDocumentTitle})',
+      'w.jsx(MimirEditableDocumentTitle,{heading:true,title:mimirDocumentTitle,onRename:mimirRenameDocument,disabled:!s||p||mimirRenaming||l==="conflict"})');
+    scope = replaceOnce(scope,
+      '(0,w.jsx)("span",{className:"mimir-topbar-location",children:J==="document"?mimirDocumentTitle:"\\u79D1\\u7814\\u5DE5\\u4F5C\\u533A"})',
+      'w.jsx(MimirEditableDocumentTitle,{className:"mimir-topbar-location",title:J==="document"?mimirDocumentTitle:"科研工作区",onRename:mimirRenameDocument,disabled:J!=="document"||!s||p||mimirRenaming||l==="conflict"})');
+    const rename = readFileSync(new URL('../growth/client/document-title-controller.js', import.meta.url),'utf8')+'\nlet gn=';
+    scope = replaceOnce(scope, 'let gn=(0,q.useCallback)', rename+'(0,q.useCallback)');
+    source = source.slice(0,start)+scope+source.slice(end);
+  }
+  const renameStart=source.indexOf('async function mimirRenameDocument('),renameEnd=source.indexOf('let gn=',renameStart);
+  if(renameStart<0||renameEnd<renameStart)throw new Error('Document title controller not found');
+  source=source.slice(0,renameStart)+readFileSync(new URL('../growth/client/document-title-controller.js',import.meta.url),'utf8')+'\n'+source.slice(renameEnd);
+  source=replaceOnce(source,'mimirRenameBusy=q.useRef(false);let s=e.source','mimirRenameBusy=q.useRef(false),mimirPendingRename=q.useRef(null);let s=e.source');
+  source=replaceOnce(source,'(0,q.useEffect)(()=>{_e?.setEditable(!p)},[_e,p])','(0,q.useEffect)(()=>{_e?.setEditable(!p&&!mimirRenaming&&!mimirPendingRename.current)},[_e,p,mimirRenaming,!!mimirPendingRename.current])');
+  source=replaceOnce(source,'Vc=async()=>{try{let H=await e.load(r.documentId);st.current=H.version','Vc=async()=>{try{let H=await e.load(r.documentId);mimirPendingRename.current=null;mimirSetDocumentTitle(H.title);st.current=H.version');
+  source=source.replaceAll('onRename:mimirRenameDocument,disabled:', 'onRename:mimirRenameDocument,pendingTitle:mimirPendingRename.current?.title,disabled:');
+  source = replaceOnce(source,
+    'async propose(e){if(!$he(e))',
+    `async rename(input){const saved=D3(await this.request('/rename',input));if(saved.documentId!==input.documentId||this.currentDocument&&saved.projectId!==this.currentDocument.projectId)throw new Zt('UPSTREAM_UNAVAILABLE','文稿服务返回了其他文稿。');return saved}async propose(e){if(!$he(e))`);
+  source = replaceOnce(source, '["/save","/propose","/apply"].includes(e)', '["/save","/rename","/propose","/apply"].includes(e)');
   source = replaceOnce(source,
     'run(e){return this.response(this.fetcher(new URL("api/mimir/tools",this.baseURI),{method:"POST",credentials:"same-origin",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(e)}))}',
     'run(e,t){return this.response(this.fetcher(new URL("api/mimir/tools",this.baseURI),{method:"POST",credentials:"same-origin",headers:{Accept:"application/json","Content-Type":"application/json"},body:JSON.stringify(e),signal:t}))}')

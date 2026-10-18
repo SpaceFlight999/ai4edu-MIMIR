@@ -1,6 +1,7 @@
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
 import { checkedResearchChatStream } from './research-chat-quality.mjs'
+import { checkedModelOutputStream } from './model-output-reduction.mjs'
 
 const installations = new WeakMap()
 
@@ -27,8 +28,21 @@ export async function installModelPolicy(ctx, { nativeApi } = {}) {
   // native prepared request, connection options or persisted model selection.
   const stop = (llm.ctx ?? ctx).on('llm/stream', function (options, next) {
     if (this?.adapters !== llm.adapters) return next()
+    // Internal retries are already owned by this gate. Research stages retain
+    // their existing recursive budgets, output_reduction events and validation.
+    if (['mimir-output-reduction', 'mimir-research-runtime'].includes(options.purpose)) return next()
     const originalStream = next()
-    return checkedResearchChatStream(options, () => originalStream, async ({ signal, messages }) => {
+    const completeStream = () => checkedModelOutputStream(options, () => originalStream, async ({ signal, messages }) => {
+      const prepared = await llm.prepareCall({
+        provider: options.provider, model: options.model,
+        ...(options.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort }),
+        ...(options.maxTokens === undefined ? {} : { maxTokens: options.maxTokens }),
+      }, signal)
+      const request = { ...options, ...prepared.config, messages, signal, purpose: 'mimir-output-reduction' }
+      if (native.isAgentLoopRequest?.(options)) native.markAgentLoopRequest(request)
+      return prepared.stream(request)
+    }, native)
+    return checkedResearchChatStream(options, completeStream, async ({ signal, messages }) => {
       const prepared = await llm.prepareCall({
         provider: options.provider, model: options.model,
         ...(options.reasoningEffort === undefined ? {} : { reasoningEffort: options.reasoningEffort }),

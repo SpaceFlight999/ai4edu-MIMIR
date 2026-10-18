@@ -7429,6 +7429,28 @@ var DocumentService = class {
       return updated;
     });
   }
+  rename(context2, input) {
+    contextFor(context2, "document:write");
+    requireValid(input && typeof input === 'object' && !Array.isArray(input) && Object.keys(input).length === 5 && Object.keys(input).every(key => ['documentId','expectedVersion','title','requestId','idempotencyKey'].includes(key)), '标题修改请求无效');
+    for (const key of ['documentId','requestId','idempotencyKey']) requireId(input[key], key);
+    requireValid(Number.isSafeInteger(input.expectedVersion) && input.expectedVersion >= 1, '文稿版本无效');
+    requireValid(typeof input.title === 'string' && input.title.trim().length > 0 && input.title.trim().length <= 200 && !/[\u0000-\u001f\u007f]/.test(input.title), '标题需为1至200个字符的单行文本');
+    const title = input.title.trim();
+    return this.transaction(() => {
+      const current = this.document(context2, input.documentId);
+      const fingerprint = hash({ documentId:input.documentId, expectedVersion:input.expectedVersion, title });
+      const prior = this.previous(context2, 'rename', input.idempotencyKey, fingerprint);
+      if (prior) return prior;
+      if (current.version !== input.expectedVersion) throw new DocumentError('VERSION_CONFLICT', '文稿已变化，请刷新后再修改标题', { currentVersion:current.version });
+      if (current.title === title) { this.remember(context2, 'rename', input.idempotencyKey, fingerprint, current); return current; }
+      const updated = { ...current, title, version:current.version+1, updatedAt:this.timestamp() };
+      const result = this.db.prepare('UPDATE documents SET title = ?, version = ?, updated_at = ? WHERE document_id = ? AND project_id = ? AND version = ?').run(title, updated.version, updated.updatedAt, input.documentId, context2.projectId, input.expectedVersion);
+      if (result.changes !== 1) throw new DocumentError('VERSION_CONFLICT', '文稿已变化，请刷新后再修改标题');
+      this.record(context2, input.documentId, 'document.renamed', input.requestId, { documentId:input.documentId, version:updated.version, title });
+      this.remember(context2, 'rename', input.idempotencyKey, fingerprint, updated);
+      return updated;
+    });
+  }
   propose(context2, input) {
     contextFor(context2, "proposal:write");
     requireValid(validateProposalInput(input), "\u5EFA\u8BAE\u8BF7\u6C42\u4E0D\u7B26\u5408\u5951\u7EA6");
@@ -9244,7 +9266,7 @@ async function suggestWithDsh(ctx, input, signal) {
   const call = await prepareAiCall(ctx, generationSignal);
   const { provider, model } = call.selection;
   try {
-    for await (const chunk of abortableChunks(call.stream({ ...call.config, messages: [message], system, signal: generationSignal }), generationSignal)) {
+    for await (const chunk of abortableChunks(call.stream({ ...call.config, messages: [message], system, signal: generationSignal, purpose:'mimir-workbench-edit' }), generationSignal)) {
       if (chunk.type === "text-delta") {
         after += chunk.text;
         if (after.length > MAX_SOURCE * 2) throw new Error("\u6A21\u578B\u8FD4\u56DE\u5185\u5BB9\u8FC7\u957F\uFF0C\u8BF7\u7F29\u77ED\u9009\u533A\u540E\u91CD\u8BD5\u3002");
@@ -9544,7 +9566,7 @@ async function assistWithDsh(ctx, input, tools, signal) {
     let output = "", finish;
     const call = await prepareAiCall(ctx, generationSignal, selection);
     try {
-      for await (const chunk of abortableChunks(call.stream({ ...call.config, messages: [...messages], system, signal: generationSignal }), generationSignal)) {
+      for await (const chunk of abortableChunks(call.stream({ ...call.config, messages: [...messages], system, signal: generationSignal, purpose:'mimir-workbench-assist' }), generationSignal)) {
         if (chunk.type === "text-delta") output += chunk.text;
         if (output.length > 16e4) throw new Error("\u6A21\u578B\u8FD4\u56DE\u8FC7\u957F\uFF0C\u8BF7\u7F29\u5C0F\u534F\u4F5C\u8303\u56F4");
         if (chunk.type === "finish") finish = chunk.reason;
@@ -12441,6 +12463,7 @@ var ROUTES = [
   ["/api/mimir/document/proposals", "GET", "listProposals"],
   ["/api/mimir/document/audit", "GET", "listAudit"],
   ["/api/mimir/document/save", "POST", "save"],
+  ["/api/mimir/document/rename", "POST", "rename"],
   ["/api/mimir/document/propose", "POST", "propose"],
   ["/api/mimir/document/authorize", "POST", "authorize"],
   ["/api/mimir/document/apply", "POST", "apply"],

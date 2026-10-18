@@ -3,12 +3,9 @@ For each paper use at most 3 claims, 2 methods, 2 limitations and 2 critical que
 Synthesis: at most 3 comparisons, 3 gaps and 6 draft paragraphs; each draft paragraph at most 180 Chinese characters (or 100 English words). Present the most relevant findings first; this is display order, not scientific ranking. Preserve qualifications, uncertainty and applicability conditions. comparable=true is allowed only for the exact same non-null dataset, metric and protocol in comparisonPolicy; qualitative discussion of different methods uses comparable=false.
 Review only claims and references actually used in the draft: at most 6 issues and 8 semanticAssessments; each reason at most 100 characters. Never enumerate all source evidence. Do not request additional pages already read.`;
 
-export function conciseResearchChoice(choice, modelInfo) {
-  const effective = choice.reasoningEffort ?? modelInfo?.reasoning?.defaultEffort;
-  if (['off','minimal','low'].includes(effective)) return {...choice};
-  const supported = new Set(modelInfo?.reasoning?.efforts?.map(item=>item.id) ?? []);
-  const shorter = ['low','minimal','medium','off'].find(id=>supported.has(id));
-  return shorter ? {...choice,reasoningEffort:shorter} : {...choice};
+export function conciseResearchChoice(choice) {
+  // Concise output must not silently lower either explicit or model-default effort.
+  return { ...choice };
 }
 
 // Remove only exact duplicates. Unique conclusions, qualifications and errors survive.

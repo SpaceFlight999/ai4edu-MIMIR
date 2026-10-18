@@ -31,6 +31,8 @@
 <section id="settings" hidden aria-label="模型选择">
   <p id="runtime-status" hidden></p><p id="data-directory" hidden></p>
   <div class="form-row"><label>提供商<select id="provider"><option value="">选择提供商</option></select></label><label>模型<select id="model"><option value="">选择模型</option></select></label><button id="model-save">使用此模型</button></div>
+  <p id="model-preview" class="reader-model-identity" aria-live="polite"></p>
+  <div class="form-row"><label>推理强度<select id="model-effort"><option value="">模型默认</option></select></label><button id="model-refresh">刷新模型目录</button></div>
   <p>研究探讨、论文导读与文稿工作台共用默认模型。</p>
 </section>
 <footer class="reader-footer"><p id="status" role="status" aria-live="polite">正在连接业务服务…</p><div class="actions" aria-label="论文工具"><button id="import-button" class="primary">导入 PDF</button><input type="file" id="import-file" accept="application/pdf,.pdf" multiple hidden><button id="cancel" hidden>取消生成</button><button id="export">导出笔记</button><button id="settings-toggle" aria-expanded="false" aria-controls="settings">模型</button></div></footer>

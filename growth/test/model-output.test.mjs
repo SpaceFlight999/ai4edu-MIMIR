@@ -29,11 +29,12 @@ test('brief result returns referenced evidence and preserves the complete export
   assert.equal(result.evidenceManifest.length,2000);assert.equal(brief.synthesis,result.synthesis);
   assert.equal(compactResearchResult(null),null);
 });
-test('concise choice uses only supported reasoning and leaves global selection intact',()=>{
+test('concise output preserves explicit and model-default reasoning without downgrading it',()=>{
   const choice={provider:'fixture',model:'fixture',reasoningEffort:'high'},info={reasoning:{efforts:[{id:'off'},{id:'low'},{id:'high'}]}};
-  assert.deepEqual(conciseResearchChoice(choice,info),{...choice,reasoningEffort:'low'});
+  assert.deepEqual(conciseResearchChoice(choice,info),choice);
   assert.equal(choice.reasoningEffort,'high');
   assert.deepEqual(conciseResearchChoice({...choice,reasoningEffort:'off'},info),{...choice,reasoningEffort:'off'});
   assert.deepEqual(conciseResearchChoice(choice),choice);
-  assert.equal(conciseResearchChoice(choice,{reasoning:{efforts:[{id:'medium'}]}}).reasoningEffort,'medium');
+  assert.equal(conciseResearchChoice(choice,{reasoning:{efforts:[{id:'medium'}]}}).reasoningEffort,'high');
+  assert.deepEqual(conciseResearchChoice({provider:'fixture',model:'fixture'},info),{provider:'fixture',model:'fixture'});
 });

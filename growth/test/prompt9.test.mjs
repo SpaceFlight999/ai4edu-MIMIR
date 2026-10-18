@@ -19,7 +19,8 @@ test('result navigation opens its target disclosure as well as folded ancestors'
   const previous=globalThis.matchMedia;globalThis.matchMedia=()=>({matches:true});let scrolled=false,focused=false;
   try{
     const parent={tagName:'DETAILS',open:false,parentElement:null};
-    const target={tagName:'DETAILS',open:false,parentElement:parent,scrollIntoView:()=>{scrolled=true;},focus:()=>{focused=true;}};
+    const pane={scrollTop:0,scrollLeft:0,clientTop:0,querySelector:()=>null,getBoundingClientRect:()=>({top:0}),scrollTo:()=>{scrolled=true;}};
+    const target={tagName:'DETAILS',open:false,parentElement:parent,closest:()=>pane,getClientRects:()=>[{}],getBoundingClientRect:()=>({top:200}),focus:()=>{focused=true;}};
     jumpToSection(target);assert.equal(target.open,true);assert.equal(parent.open,true);assert.ok(scrolled&&focused);
   }finally{if(previous===undefined)delete globalThis.matchMedia;else globalThis.matchMedia=previous;}
 });

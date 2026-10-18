@@ -3,16 +3,18 @@ import { resolve, join } from 'node:path'
 import { createHash } from 'node:crypto'
 import { applyModelProfileSeed } from '../growth/overrides/app/model-profile-seed.mjs'
 import { applyProductConfigWrite } from '../growth/overrides/app/product-config-write.mjs'
+import { applyDeepSeekCompatibility, applyModelSelectorCompatibility } from '../growth/overrides/app/deepseek-compatibility.mjs'
 const root = resolve('runtime'), target = join(root, 'system/engine/node_modules/@mimir/growth-layer')
 if (!existsSync(join(root, 'system/app/environment.mjs'))) throw new Error('Restore the runtime first.')
 if (!existsSync('growth/lib/client.js')) throw new Error('Build the growth client first.')
 mkdirSync(target, { recursive: true })
 for (const entry of ['package.json', 'cordis.patch.yml', 'src', 'lib']) cpSync(join('growth', entry), join(target, entry), { recursive: true })
-const paperOverridePaths = ['reader.mjs', 'reader.css', 'reader-ui.mjs', 'research-ui.mjs', 'reader.html', 'drafts.mjs', 'highlights.mjs', 'session.mjs'].map(name => 'system/engine/node_modules/@mimir/dsh-workbench-bundle/paper/viewer/' + name)
+const paperOverridePaths = ['reader.mjs', 'reader.css', 'reader-ui.mjs', 'reader-models.mjs', 'research-ui.mjs', 'reader.html', 'drafts.mjs', 'highlights.mjs', 'session.mjs'].map(name => 'system/engine/node_modules/@mimir/dsh-workbench-bundle/paper/viewer/' + name)
 for (const path of paperOverridePaths) cpSync(join('growth/overrides/paper/viewer', path.split('/').at(-1)), join(root, path))
 const nativeOverrides = [
   ['growth/overrides/atomic-write/index.js', 'system/engine/node_modules/@deepseek-ai/dsh-atomic-write/lib/index.js'],
   ['growth/overrides/app/model-policy.mjs', 'system/app/model-policy.mjs'],
+  ['growth/overrides/app/model-output-reduction.mjs', 'system/app/model-output-reduction.mjs'],
   ['growth/overrides/app/research-chat-quality.mjs', 'system/app/research-chat-quality.mjs'],
   ['growth/overrides/session-title-llm/index.js', 'system/engine/node_modules/@deepseek-ai/dsh-session-title-llm/lib/index.js'],
   ['growth/overrides/host/model-comparison.mjs', 'system/engine/node_modules/@mimir/dsh-workbench-bundle/host/model-comparison.mjs'],
@@ -25,6 +27,10 @@ const nativeOverrides = [
   ['growth/overrides/chat/client.js', 'system/engine/node_modules/@deepseek-ai/dsh-client-ui-chat/lib/client.js'],
 ]
 for (const [source, destination] of nativeOverrides) cpSync(source, join(root, destination))
+const deepSeekPath = 'system/engine/node_modules/@deepseek-ai/dsh-llm-deepseek/lib/index.js'
+writeFileSync(join(root, deepSeekPath), applyDeepSeekCompatibility(readFileSync(join(root, deepSeekPath), 'utf8')))
+const modelSelectorPath = 'system/engine/node_modules/@deepseek-ai/dsh-client-ui-model-selection/lib/client.js'
+writeFileSync(join(root, modelSelectorPath), applyModelSelectorCompatibility(readFileSync(join(root, modelSelectorPath), 'utf8')))
 const environmentPath = join(root, 'system/app/environment.mjs')
 // Seed legacy launcher credentials through DSH so the Models page can edit them.
 const appPath = join(root, 'system/app/app.mjs')
@@ -70,7 +76,7 @@ const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'))
 manifest.dependencies['@mimir/growth-layer'] = 'file:../../../growth'
 writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + '\n')
 const files = {}
-const overlayPaths = ['system/app/environment.mjs', 'system/app/app.mjs', 'system/engine/package.json', ...paperOverridePaths, ...nativeOverrides.map(([, destination]) => destination)]
+const overlayPaths = ['system/app/environment.mjs', 'system/app/app.mjs', 'system/engine/package.json', deepSeekPath, modelSelectorPath, ...paperOverridePaths, ...nativeOverrides.map(([, destination]) => destination)]
 function collect(directory) {
   for (const entry of readdirSync(join(root, directory), { withFileTypes: true })) {
     const path = directory + '/' + entry.name

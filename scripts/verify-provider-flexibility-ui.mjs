@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
 import { connectBrowser } from './cdp.mjs'
 import { openResearchChat, sendResearchChat, readNewResearchReply } from './research-chat-driver.mjs'
+import { prepareTitlePlanHome, verifyTitlePlanUi } from './title-plan-ui-cases.mjs'
 
 const project = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const home = join(project, '.test-data', 'provider-flexibility-' + randomUUID())
@@ -18,6 +19,9 @@ assert.equal(dirname(reportPath), join(project, 'artifacts'))
 assert.equal(existsSync(reportPath), false)
 const reply = 'θ₁相对基座固定+x轴，θ₂相对第一杆。理想模型没有实物验证。先画两杆，再核对投影相加。'
 const calls = [], exceptions = [], checks = []
+const adaptation = process.argv.includes('--adaptation')
+const titlePlan = process.argv.includes('--title-plan')
+let preSwitchCalls = 0
 let host, edge, browser, instance, log = ''
 const delay = ms => new Promise(done => setTimeout(done, ms))
 const report = { passed: false, version: '0.12.10', realDataRead: false, paidModelCalls: 0, productionMode: true, isolatedHome: true, checks }
@@ -30,9 +34,10 @@ const provider = createServer(async (request, response) => {
     }
     assert.equal(request.url, '/v1/chat/completions')
     let raw = ''; for await (const bytes of request) raw += bytes
-    const body = JSON.parse(raw), last = JSON.stringify(body.messages.at(-1))
+    const body = JSON.parse(raw), history = JSON.stringify(body.messages)
     assert.equal(request.headers.authorization, 'Bearer synthetic-local-key')
-    const isRepair = last.includes('请重新回答原用户问题'), isChat = last.includes('最多120字')
+    const isRepair = history.includes('请重新回答原用户问题'), isChat = history.includes('最多120字')
+    if (adaptation) writeFileSync(join(home, 'last-synthetic-request.json'), JSON.stringify(body, null, 2))
     calls.push({ model: body.model, path: request.url, isChat, isRepair })
     const text = isChat && !isRepair ? '长'.repeat(159) : isRepair ? reply : '合成科研会话'
     response.writeHead(200, { 'content-type': 'text/event-stream' })
@@ -77,6 +82,7 @@ async function closeBrowser() {
   await wait(() => edge.exitCode !== null, 10000)
 }
 try {
+  if(titlePlan)prepareTitlePlanHome(home)
   await new Promise(done => provider.listen(0, '127.0.0.1', done))
   const endpoint = 'http://127.0.0.1:' + provider.address().port + '/v1'
   writeFileSync(join(home, 'profiles/web/cordis.patch.yml'), '- id: agent-default-model\n  config:\n    provider: mimir-local\n    model: local-model-a\n- id: llm-pi-ai\n  config:\n    providers:\n      mimir-local:\n        displayName: Local Gateway\n        apiKeyEnv: DEEPSEEK_API_KEY\n        api: openai-completions\n        baseURL: ' + endpoint + '\n        models:\n          - id: local-model-a\n            name: Local Model A\n            reasoningEfforts: false\n          - id: local-model-b\n            name: Local Model B\n            reasoningEfforts: false\n        retryPolicy:\n          mode: normal\n          maxRetries: 0\n')
@@ -98,10 +104,56 @@ try {
   })
   await browser.send('Page.navigate', { url: instance.url })
   await browser.waitFor('Boolean(document.querySelector(".mg-well-landing"))')
+  if(titlePlan)await verifyTitlePlanUi({browser,project,checks})
+  else {
   await openResearchChat(browser)
+  if (adaptation) {
+    const previous = await sendResearchChat(browser, 'Synthetic first question. Do not call tools.')
+    assert.equal(await readNewResearchReply(browser, previous, 60000), '合成科研会话')
+    preSwitchCalls = calls.length
+    assert.ok(calls.every(call => call.model === 'local-model-a'))
+  }
   await browser.evaluate('window.dispatchEvent(new CustomEvent("mimir:settings",{detail:"models"}))')
-  await browser.waitFor('document.querySelector("[data-current-model]")?.textContent.includes("local-model-a")')
+  await browser.waitFor('document.querySelector("[data-current-model]")?.textContent.includes("Local Model A")')
   checks.push({ name: 'startup-keeps-custom-provider-and-model', passed: true })
+  if (adaptation) {
+    await browser.waitFor('Boolean(document.querySelector("[data-model-preview]"))')
+    assert.equal(await browser.evaluate('document.querySelectorAll(".mg-model-settings .mimir-model-badge").length'), 0)
+    await select('[data-model-provider]', 'deepseek-official')
+    await browser.waitFor('document.querySelector("[data-model-preview] .mimir-model-version-text")?.textContent==="1017"')
+    assert.equal(await browser.evaluate('[...document.querySelector("[data-model-id]").options].some(o=>o.textContent.includes("1017"))'),true)
+    assert.deepEqual(await browser.evaluate('[...document.querySelector("[data-model-effort]").options].filter(o=>o.value).map(o=>o.value)'), ['off','low','high','max'])
+    await select('[data-model-effort]', 'max')
+    await clickText('保存模型与 Key', '.mg-model-settings')
+    await browser.waitFor('document.querySelector("[data-current-model]")?.textContent.includes("Max")')
+    const current = await browser.evaluate('fetch("/api/mimir/growth/model-selection").then(r=>r.json()).then(r=>r.data)')
+    assert.equal(current.model, 'deepseek-flash'); assert.equal(current.reasoningEffort, 'max'); assert.equal(current.version, '1017')
+    await browser.send('Emulation.setDeviceMetricsOverride', { width:1280, height:960, deviceScaleFactor:1, mobile:false })
+    writeFileSync(join(project, 'artifacts/model-api-settings-light-20261017.png'), Buffer.from((await browser.send('Page.captureScreenshot', {format:'png'})).data, 'base64'))
+    await clickText('外观', '.mimir-settings-dialog nav')
+    await clickText('深色', '.mimir-mode-options')
+    await clickText('模型', '.mimir-settings-dialog nav')
+    await browser.waitFor('document.querySelector("[data-current-model] .mimir-model-version-text")?.textContent==="1017"')
+    const badge = await browser.evaluate('(()=>{const n=document.querySelector("[data-current-model] .mimir-model-version-text"),s=getComputedStyle(n);return {mode:document.body.dataset.mimirMode,color:s.color,background:s.backgroundColor}})()')
+    assert.equal(badge.mode, 'dark'); assert.equal(badge.background, 'rgba(0, 0, 0, 0)')
+    assert.equal(await browser.evaluate('document.querySelectorAll(".mg-model-settings .mimir-model-badge").length'),0)
+    writeFileSync(join(project, 'artifacts/model-api-settings-dark-20261017.png'), Buffer.from((await browser.send('Page.captureScreenshot', {format:'png'})).data, 'base64'))
+    await browser.send('Emulation.setDeviceMetricsOverride', { width:390, height:844, deviceScaleFactor:1, mobile:true })
+    assert.equal(await browser.evaluate('document.querySelector(".mimir-settings-dialog").getBoundingClientRect().width<=innerWidth'),true)
+    writeFileSync(join(project, 'artifacts/model-api-settings-mobile-20261017.png'), Buffer.from((await browser.send('Page.captureScreenshot', {format:'png'})).data, 'base64'))
+    await browser.send('Emulation.setDeviceMetricsOverride', { width:1280, height:960, deviceScaleFactor:1, mobile:false })
+    checks.push({ name:'deepseek-1017-badge-real-effort-save-and-responsive-light-dark-ui', passed:true })
+    await browser.evaluate('(()=>{const n=document.querySelector("[data-model-key]");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(n,"synthetic-unsaved-other-provider-key");n.dispatchEvent(new Event("input",{bubbles:true}))})()')
+    await browser.evaluate('fetch("/api/mimir/growth/model-settings",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({provider:"mimir-local",model:"local-model-a"})}).then(r=>r.json()).then(r=>{if(!r.ok)throw Error("synthetic selection failed");window.dispatchEvent(new CustomEvent("mimir-model-changed"))})')
+    await browser.waitFor('document.querySelector("[data-model-provider]").value==="mimir-local"&&document.querySelector("[data-model-key]").value===""')
+    checks.push({name:'external-provider-change-clears-unsaved-key-before-saving',passed:true})
+    // A global settings change must not relabel an existing session as a different model.
+    await browser.evaluate('document.querySelector(".mimir-settings-header button[aria-label=关闭设置]").click()')
+    await browser.waitFor('document.querySelector("[data-research-model]")?.textContent.includes("Local Model A")')
+    checks.push({ name:'existing-session-display-keeps-actual-model-after-global-default-change', passed:true })
+    await browser.evaluate('window.dispatchEvent(new CustomEvent("mimir:settings",{detail:"models"}))')
+    await browser.waitFor('Boolean(document.querySelector("[data-configure-providers]"))')
+  }
   await clickText('配置提供商', '.mg-model-settings')
   await browser.waitFor('Boolean(document.querySelector("[data-native-provider-settings]"))')
   await clickText('添加模型提供商', '[data-native-provider-settings]')
@@ -133,11 +185,68 @@ try {
   assert.match(profile, /provider: added-gateway/)
   checks.push({ name: 'custom-model-selection-saves-without-forced-migration', passed: true })
   await browser.evaluate('document.querySelector(".mimir-settings-header button[aria-label=关闭设置]").click()')
+  if (adaptation) {
+    await browser.evaluate('document.querySelector("[data-research-model] button[aria-haspopup=menu]").click()')
+    await browser.waitFor('Boolean(document.querySelector("[role=menu] [role=menuitem]"))')
+    await browser.evaluate('document.querySelector("[role=menu] [role=menuitem]").click()')
+    await browser.waitFor('[...document.querySelectorAll("[role=group]")].some(n=>n.innerText.includes("Added Gateway"))')
+    assert.equal(await browser.evaluate('document.querySelectorAll("[role=menu] .mimir-model-badge").length'),0)
+    assert.equal(await browser.evaluate('document.querySelector("[role=menu]").innerText.includes("1017")'),true)
+    await browser.evaluate('[...document.querySelectorAll("[role=group]")].find(n=>n.innerText.includes("Added Gateway")).querySelector("button[title=local-model-b]").click()')
+    await browser.waitFor('document.querySelector("[data-research-model]")?.textContent.includes("local-model-b")')
+    checks.push({ name:'native-session-selector-switches-current-session-with-provider-and-model', passed:true })
+  }
   const previous = await sendResearchChat(browser, '已知二连杆均为1米、角均为0度，末端(2,0)米。请用中文最多120字解释参考系、限制与一个核查步骤。不要调用工具。')
   assert.equal(await readNewResearchReply(browser, previous, 60000), reply)
   assert.equal(calls.filter(call => call.isRepair).length, 1)
-  assert.ok(calls.length >= 3 && calls.every(call => call.model === 'local-model-b'))
+  assert.ok(calls.length >= 3 && calls.slice(preSwitchCalls).every(call => call.model === 'local-model-b'))
   checks.push({ name: 'native-openai-compatible-chat-title-and-one-quality-repair-use-selected-model', passed: true })
+  if (adaptation) {
+    await browser.evaluate('document.querySelector("[data-research-model] button[aria-haspopup=menu]").click()')
+    await browser.waitFor('Boolean(document.querySelector("[role=menu] [role=menuitem]"))')
+    await browser.evaluate('document.querySelector("[role=menu] [role=menuitem]").click()')
+    await browser.waitFor(`Boolean(document.querySelector('[role=menu] button[title="DeepSeek-V4.1-Flash-1017"]'))`)
+    await browser.evaluate(`document.querySelector('[role=menu] button[title="DeepSeek-V4.1-Flash-1017"]').click()`)
+    await browser.waitFor('document.querySelector("[data-research-model] .mimir-model-badge")?.textContent==="1017"')
+    writeFileSync(join(project,'artifacts/model-api-research-1017-20261017.png'),Buffer.from((await browser.send('Page.captureScreenshot',{format:'png'})).data,'base64'))
+    checks.push({name:'active-model-has-blue-1017-while-settings-and-all-dropdown-models-use-plain-1017',passed:true})
+    await browser.evaluate('document.querySelector(".mimir-product-nav button[aria-label=论文]").click()')
+    await browser.waitFor('Boolean(document.querySelector(".mimir-reading-panel iframe")?.src)')
+    const tree = await browser.send('Page.getFrameTree')
+    const child = tree.frameTree.childFrames?.find(node=>node.frame.url.includes('127.0.0.1'))
+    assert.ok(child)
+    const world = await browser.send('Page.createIsolatedWorld',{frameId:child.frame.id,worldName:'model-ui-acceptance'})
+    const reader = async expression => {
+      const result = await browser.send('Runtime.evaluate',{expression,contextId:world.executionContextId,returnByValue:true,awaitPromise:true})
+      if (result.exceptionDetails) throw new Error(result.exceptionDetails.text)
+      return result.result.value
+    }
+    await wait(()=>reader('document.querySelector("#settings-toggle")?.textContent.includes("1017")'))
+    checks.push({name:'reader-serves-model-module-and-reads-token-scoped-shared-settings',passed:true})
+    await reader('document.querySelector("#settings-toggle").click()')
+    await browser.waitFor('Boolean(document.querySelector(".mimir-settings-dialog[open]"))')
+    await select('[data-model-provider]','deepseek-official')
+    await browser.waitFor('document.querySelector("[data-model-preview] .mimir-model-version-text")?.textContent==="1017"')
+    await select('[data-model-effort]','low')
+    await clickText('保存模型与 Key','.mg-model-settings')
+    await wait(()=>reader('document.querySelector("#settings-toggle .reader-model-badge")?.textContent==="1017"&&document.querySelector("#settings-toggle").textContent.includes("Low")'))
+    assert.equal(await reader('document.querySelector("#settings-toggle").textContent.includes("Low")'),true)
+    await browser.evaluate('document.querySelector(".mimir-settings-header button[aria-label=关闭设置]").click()')
+    writeFileSync(join(project,'artifacts/model-api-reader-20261017.png'),Buffer.from((await browser.send('Page.captureScreenshot',{format:'png'})).data,'base64'))
+    checks.push({name:'reader-refreshes-model-and-effort-after-parent-settings-save',passed:true})
+    await browser.send('Page.navigate',{url:child.frame.url})
+    await browser.waitFor('document.querySelector("#settings-toggle .reader-model-badge")?.textContent==="1017"')
+    await browser.evaluate('document.querySelector("#settings-toggle").click()')
+    await browser.waitFor('document.querySelector("#model-preview").textContent.includes("1017")')
+    assert.equal(await browser.evaluate('document.querySelector("#model-preview").textContent.includes("1017")&&document.querySelectorAll("#settings .reader-model-badge").length===0'),true)
+    await select('#model-effort','max')
+    await clickText('使用此模型','#settings')
+    await browser.waitFor('document.querySelector("#settings-toggle").textContent.includes("Max")')
+    const rejected = await browser.evaluate('fetch(new URL("api/model-settings",location.href),{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({provider:"deepseek-official",model:"deepseek-flash"})}).then(r=>r.status)')
+    assert.equal(rejected,403)
+    checks.push({name:'standalone-reader-saves-actual-effort-and-retains-token-and-csrf-checks',passed:true})
+  }
+  }
   assert.deepEqual(exceptions, [])
   report.passed = true
 } catch (error) {

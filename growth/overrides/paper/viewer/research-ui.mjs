@@ -1,5 +1,5 @@
 import {chronological,displayTime,chineseError,CRITICAL_POINTS,RESEARCH_TIMEOUT_MS} from './session.mjs';
-import {disclosure as makeDisclosure,titleNavigation} from './reader-ui.mjs';
+import {disclosure as makeDisclosure,titleNavigation,scrollWithinAnalysis} from './reader-ui.mjs';
 const kinds={original_fact:'原文事实（需复核语义）',author_conclusion:'作者结论',model_inference:'模型推断',unknown:'待核实'};
 const statuses={running:'处理中',succeeded:'草稿已完成',failed:'失败',cancelled:'已取消',timed_out:'超时',interrupted:'运行中断'};
 export function installResearchUi({$,api,el,button,message,error,state,openPaper,locate,thinking}) {
@@ -57,7 +57,7 @@ export function installResearchUi({$,api,el,button,message,error,state,openPaper
     const analysis=disclosure('展开论文分析 · '+draft.analysis.papers.length+' 篇',box=>{for(const paper of draft.analysis.papers){box.append(el('h3',run.sources?.find(p=>p.paperId===paper.paperId)?.title??paper.paperId));for(const [key,title] of [['claims','主张'],['methods','方法'],['limitations','限制'],['criticalQuestions','待研究问题']])for(const row of paper[key])statement(title,row,box);for(const [key,row] of Object.entries(paper.conditions)){const card=el('div');card.append(el('p',`${({dataset:'数据集',metric:'评价指标',protocol:'实验协议'})[key]??key}：${row.value??'本次范围未确认；不表示论文存在缺陷'}`));cite(card,row.evidenceIds,draft.evidenceManifest,run.sources);box.append(card);}}});analysis.dataset.researchAnalysis='true';
     disclosure('复核与使用限制',box=>{box.append(el('p','研究草稿尚未经人工确认，引用定位不证明语义支持或结论正确。'));for(const issue of draft.review.issues)box.append(el('p',issue.message));for(const text of draft.limitations)box.append(el('p',text));});
     const nav=titleNavigation(el,button,sections,'研究结果标题导航');if(nav)output.prepend(nav);
-    if(run.status==='succeeded')output.scrollIntoView({block:'start'});
+    if(run.status==='succeeded')scrollWithinAnalysis(output);
   }
   async function openRun(runId) {
     stopTimers();active=runId;const rev=++revision;let failures=0;

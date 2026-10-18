@@ -1,8 +1,8 @@
 // Real UI acceptance. No provider fixture, model credential, personal data, or backend substitute.
 import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
-import { randomUUID, createHash } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync, writeFileSync, mkdirSync, readdirSync } from 'node:fs'
 import { rm } from 'node:fs/promises'
 import { resolve, join, dirname, basename } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -72,22 +72,12 @@ async function appendEditor(text, paragraph = false) {
   await browser.send('Input.insertText', { text })
   await delay(100)
 }
-async function editorText() { return browser.evaluate("document.querySelector('.mimir-paper .tiptap').innerText.trim()") }
 async function sample(name, run) {
   const check = { name, passed: false }, start = Date.now(); report.checks.push(check)
   try { check.evidence = await run(); check.passed = true }
   catch (error) { check.error = { name: error.name, message: error.message.slice(0, 400) }; await snapshot('failure-' + name).catch(() => {}) }
   check.seconds = Math.round((Date.now() - start) / 1000); save()
   console.log((check.passed ? 'PASS ' : 'FAIL ') + name)
-}
-async function downloaded(extension, before) {
-  await wait(() => readdirSync(downloads).some(name => !before.has(name) && name.endsWith(extension) && statSync(join(downloads, name)).size > 0), 30000)
-  const name = readdirSync(downloads).find(name => !before.has(name) && name.endsWith(extension))
-  const path = resolve(downloads, name); assert.equal(dirname(path), downloads)
-  const bytes = readFileSync(path)
-  const evidence = { name, bytes: bytes.length, sha256: createHash('sha256').update(bytes).digest('hex'), realUIDownload: true }
-  report.downloads.push(evidence)
-  return { evidence, text: bytes.toString('utf8') }
 }
 async function closeBrowser() {
   if (!browserPort || !edge || edge.exitCode !== null) return

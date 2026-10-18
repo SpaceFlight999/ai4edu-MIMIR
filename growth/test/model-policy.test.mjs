@@ -186,3 +186,42 @@ test('native session titles use the logged request route or an explicit provider
     await assert.rejects(title.generateSessionTitleWithLlm(f.ctx, title.resolveSessionTitleLlmConfig(limits), { session, messages: selected, signal }, selected, 'synthetic-title-provider'), /no logged request route/)
   } finally { await f?.close(); await removeSyntheticPath(temporary, 'title') }
 })
+
+test('all native model calls recursively regenerate truncated output before emitting it, preserving route and original evidence', async () => {
+  const f = await fixture(), calls = [], emitted = []
+  f.llm.registration(chosen.provider).adapter.stream = async function* (options) {
+    calls.push(options)
+    yield { type: 'text-delta', text: calls.length <= 3 ? '{"claims":[TRUNCATED' : '{"claims":[]}' }
+    yield { type: 'finish', reason: { kind: calls.length <= 3 ? 'max-tokens' : 'stop' } }
+  }
+  try {
+    const prepared = await f.llm.prepareCall({ ...chosen, reasoningEffort: 'high', maxTokens: 8000 })
+    const original = JSON.stringify(f.messages)
+    const request = nativeLlm.markAgentLoopRequest(Object.freeze({ ...prepared.config, messages: f.messages, sessionId: 'reduction-fixture' }))
+    for await (const chunk of prepared.stream(request)) emitted.push(chunk)
+    assert.equal(calls.length, 4)
+    assert.equal(emitted.filter(row => row.type === 'text-delta').map(row => row.text).join(''), '{"claims":[]}')
+    assert.equal(JSON.stringify(f.messages), original)
+    const targets = calls.slice(1).map(call => Number(call.messages.at(-1).content[0].text.match(/maxProseChars=(\d+)/)?.[1]))
+    assert.ok(targets.every((target, i) => target > 0 && (i === 0 || target < targets[i - 1])))
+    for (const call of calls) {
+      assert.equal(call.provider, chosen.provider); assert.equal(call.model, chosen.model)
+      assert.equal(call.reasoningEffort, 'high'); assert.equal(call.maxTokens, 8000)
+      assert.equal(call.messages[0], f.messages[0]); assert.equal(nativeLlm.isAgentLoopRequest(call), true)
+    }
+  } finally { await f.close() }
+})
+
+test('persistent truncation stops after six reductions and never exposes partial text', async () => {
+  const f = await fixture(), calls = [], emitted = []
+  f.llm.registration(chosen.provider).adapter.stream = async function* (options) {
+    calls.push(options); yield { type: 'text-delta', text: 'PARTIAL' }; yield { type: 'finish', reason: { kind: 'max-tokens' } }
+  }
+  try {
+    let failure
+    try { for await (const chunk of f.llm.stream({ ...chosen, messages: f.messages })) emitted.push(chunk) } catch (error) { failure = error }
+    assert.equal(calls.length, 7)
+    assert.ok(failure?.code === 'MODEL_OUTPUT_LIMIT' || emitted.at(-1)?.reason?.failure?.code === 'MODEL_OUTPUT_LIMIT')
+    assert.ok(!emitted.some(row => row.type === 'text-delta'))
+  } finally { await f.close() }
+})

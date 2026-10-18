@@ -42,7 +42,6 @@ const provider=createServer(async(req,res)=>{
 async function input(selector,value){
   await browser.evaluate(`(()=>{const node=document.querySelector(${JSON.stringify(selector)}),proto=node.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(node,${JSON.stringify(value)});node.dispatchEvent(new Event('input',{bubbles:true}))})()`);
 }
-async function paperApi(op,args={}){return browser.evaluate(`fetch(new URL('api/'+${JSON.stringify(op)},location.href),{method:'POST',headers:{'Content-Type':'application/json','X-Paper-Guide':'1'},body:JSON.stringify(${JSON.stringify(args)})}).then(async r=>{const value=await r.json();if(!r.ok)throw Error(value.message);return value})`);}
 async function screenshot(name){const shot=await browser.send('Page.captureScreenshot',{format:'png'});writeFileSync('artifacts/prompt9-'+name+'.png',Buffer.from(shot.data,'base64'));}
 async function selectOriginal(){
   const quote=await browser.evaluate("(()=>{const spans=[...document.querySelectorAll('#text-layer span')].filter(n=>n.textContent.trim()),range=document.createRange();range.setStart(spans[0].firstChild,0);range.setEnd(spans.at(-1).firstChild,spans.at(-1).textContent.length);const selected=getSelection();selected.removeAllRanges();selected.addRange(range);document.querySelector('#text-layer').dispatchEvent(new MouseEvent('mouseup',{bubbles:true}));return selected.toString()})()");

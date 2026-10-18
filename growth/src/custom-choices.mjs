@@ -42,6 +42,3 @@ export function researchTopic(id, state) {
   if (!terms?.length) fail('研究方向需要有效的检索词。')
   return { id: item.id, title: item.title, query: terms.slice(0, 12).map(term => 'all:"' + term + '"').join(' AND '), searchTerm: terms.join(' ') }
 }
-export function customProblem(item) {
-  return { id: item.id, title: item.title, source: item.source, year: '自定义', type: '个人补充', prompt: item.detail || '先记录任务、来源与约束，再设计自己的验证过程。' }
-}

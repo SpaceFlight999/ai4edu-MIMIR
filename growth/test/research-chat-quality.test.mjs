@@ -12,6 +12,7 @@ const collect=async source=>{const rows=[];for await(const row of source)rows.pu
 test('complete Unicode reply count includes punctuation, formula, spaces and supplementary characters',()=>{
   assert.equal(researchChatConstraint(options).limit,120)
   assert.equal(researchChatConstraint({...options,messages:[...options.messages,native.createUserMessage({content:[{type:'text',text:'Current runtime state'}],source:{kind:'runtime-context'}})]}).limit,120)
+  assert.equal(researchChatConstraint({...options,messages:[...options.messages,native.createUserMessage({content:[{type:'text',text:'[model changed: synthetic A to B]'}],source:{kind:'model-selection',form:'notice'}})]}).limit,120)
   assert.equal(researchChatConstraint({...options,messages:[native.createDeveloperMessage({content:[{type:'text',text:'你是 Mimir 科研助手。'}]}),options.messages[1]]}).limit,120)
   assert.equal(researchChatIssues('😀'.repeat(120),{...researchChatConstraint(options),onlyGivenCoordinates:false}).length,0)
   assert.match(researchChatIssues('😀'.repeat(120)+' ',researchChatConstraint(options))[0],/121个Unicode/)

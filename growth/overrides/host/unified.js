@@ -1,6 +1,7 @@
 import {guideReady,expiredFailure,RESEARCH_TIMEOUT_MS,chineseError} from '../paper/viewer/session.mjs';
 import {compactResearchRequest} from './model-context.mjs';
 import {conciseResearchChoice,compactResearchOutput,compactResearchResult,RESEARCH_OUTPUT_INSTRUCTION} from './model-output.mjs';
+import { modelCatalog as sharedModelCatalog, modelInfo as sharedModelInfo, saveModelSettings as sharedSaveModelSettings } from '@mimir/growth-layer';
 import {comparisonPolicy,conservativeSynthesis} from './model-comparison.mjs';
 // src/unified-entry.js
 import { join as join6 } from "node:path";
@@ -48,6 +49,7 @@ function safeModelFailure(error) {
   const code=error?.code,status=error?.status??error?.statusCode??error?.httpStatus??error?.failure?.status;
   const policyMessages={MODEL_POLICY:'当前模型配置被拒绝，请核对所选提供商、模型及其配置。',MODEL_ENDPOINT_POLICY:'当前提供商地址配置无效，请核对该提供商的连接设置。',MODEL_CONFIGURATION:'模型配置无效，请核对所选提供商、思考强度及请求限制。'};
   if(Object.hasOwn(policyMessages,code))return failure(code,policyMessages[code]);
+  if(code==='MODEL_OUTPUT_LIMIT')return failure(code,'模型输出经自动缩减后仍未完整生成，结果未保存；请缩小分析范围后重试。');
   if(['AUTH','MISSING_CREDENTIAL','INVALID_CREDENTIAL'].includes(code)||[401,403].includes(status))return failure('MODEL_AUTH','模型凭据未通过验证，请核对所选供应商和 API Key。');
   if(['NO_ADAPTER','MODEL_NOT_FOUND','UNSUPPORTED_MODEL'].includes(code))return failure('MODEL_NOT_CONFIGURED','当前模型不可用，请在设置中选择已配置的模型。');
   if(code==='UNSUPPORTED_REASONING_EFFORT')return failure('MODEL_REQUEST_INVALID','所选模型不支持当前思考强度，请在模型设置中调整。');
@@ -111,7 +113,7 @@ async function callModel(llm, choice, prompt, signal, system, options = {}) {
   let text = "", finish;
   const message = { id: randomUUID(), role: "user", content: [{ type: "text", text: prompt }], source: { kind: "plugin", plugin: "mimir-paper-guide" } };
   try {
-    for await (const chunk of abortableChunks(prepared.stream({ ...prepared.config, messages: [message], system, signal }), signal)) {
+    for await (const chunk of abortableChunks(prepared.stream({ ...prepared.config, messages: [message], system, signal, ...(options.reductionManaged ? {purpose:'mimir-research-runtime'} : {}) }), signal)) {
       if (chunk.type === "text-delta") text += chunk.text;
       if (chunk.type === "finish") finish = chunk.reason;
       if (text.length > 1e5) throw failure("MODEL_OUTPUT_LIMIT", "\u6A21\u578B\u8F93\u51FA\u8FC7\u957F\u3002");
@@ -823,8 +825,7 @@ function validateClaims(claims, evidence) {
 async function analyze({ llm, choice, evidence, paper, depth = "overview", question = "", history = [], signal, maxChars = 48e3 }) {
   if (!DEPTHS[depth]) throw new PaperError("INVALID_ARGUMENT", "\u672A\u77E5\u5BFC\u8BFB\u6DF1\u5EA6\u3002");
   if (!llm || !choice?.provider || !choice?.model) throw new PaperError("MODEL_NOT_CONFIGURED", "\u8BF7\u5728\u5BBF\u4E3B\u8BBE\u7F6E\u4E2D\u914D\u7F6E\u5E76\u9009\u62E9\u6A21\u578B\u3002");
-  const info = llm.resolveModelInfo ? await awaitWithSignal(() => llm.resolveModelInfo(choice.provider, choice.model, signal), signal) : null;
-  const modelChoice = info?.reasoning?.efforts?.some((e) => e.id === "off") ? { ...choice, reasoningEffort: "off" } : choice;
+  const modelChoice = { ...choice };
   const selected = [];
   let chars = 0;
   for (const e of evidence) {
@@ -1341,6 +1342,9 @@ async function apply(ctx, input = {}) {
         });
         let result;
         if (path === "api/import") result = research.importPdf(body, (url2.searchParams.get("title") ?? "\u8BBA\u6587.pdf").slice(0, 500));
+        else if (path === "api/model-catalog") result = await sharedModelCatalog(ctx, controller.signal);
+        else if (path === "api/model-info") result = await sharedModelInfo(ctx, JSON.parse(body.toString()), controller.signal);
+        else if (path === "api/model-settings") result = await sharedSaveModelSettings(ctx, JSON.parse(body.toString()), controller.signal);
         else if (path.startsWith("api/")) result = await research.command(path.slice(4), body.length ? JSON.parse(body.toString()) : {}, controller.signal);
         else return send(404, "text/plain", "\u672A\u627E\u5230");
         return send(200, "application/json; charset=utf-8", JSON.stringify(result));
@@ -1359,7 +1363,7 @@ async function apply(ctx, input = {}) {
         res.setHeader("Content-Disposition", `attachment; filename="mimir-paper-${id}.${extension}"; filename*=UTF-8''${encodeURIComponent("\u8BBA\u6587\u5BFC\u8BFB-" + id + "." + extension)}`);
         return send(200, "text/plain; charset=utf-8", extension === "bib" ? result.bibtex : result.markdown);
       }
-      if (!["", "app.mjs", "drafts.mjs", "reader-ui.mjs", "research-ui.mjs", "session.mjs", "motion.mjs", "highlights.mjs", "style.css", "refraction.css", "vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs"].includes(path) && !/^vendor\/(?:cmaps\/[A-Za-z0-9._-]+\.bcmap|standard_fonts\/[A-Za-z0-9._-]+\.(?:pfb|ttf)|wasm\/[A-Za-z0-9._-]+\.(?:wasm|js))$/.test(path)) return send(404, "text/plain", "\u672A\u627E\u5230");
+      if (!["", "app.mjs", "drafts.mjs", "reader-ui.mjs", "reader-models.mjs", "research-ui.mjs", "session.mjs", "motion.mjs", "highlights.mjs", "style.css", "refraction.css", "vendor/pdf.min.mjs", "vendor/pdf.worker.min.mjs"].includes(path) && !/^vendor\/(?:cmaps\/[A-Za-z0-9._-]+\.bcmap|standard_fonts\/[A-Za-z0-9._-]+\.(?:pfb|ttf)|wasm\/[A-Za-z0-9._-]+\.(?:wasm|js))$/.test(path)) return send(404, "text/plain", "\u672A\u627E\u5230");
       const type = path.endsWith(".css") ? "text/css" : /\.m?js$/.test(path) ? "text/javascript" : path.endsWith(".wasm") ? "application/wasm" : path === "" ? "text/html" : "application/octet-stream";
       const staticPath = path === "" ? "reader.html" : path === "app.mjs" ? "reader.mjs" : path === "style.css" ? "reader.css" : path;
       return send(200, type + "; charset=utf-8", await readFile(new URL("viewer/" + staticPath, resourceRoot)));
@@ -2043,7 +2047,7 @@ function createDshModel(modelSource, choice) {
         source: { kind: "plugin", plugin: "mimir-research-runtime" }
       };
       const systemMessage={id:randomUUID7(),role:'system',content:[{type:'text',text:system}]};
-      const iterator = prepared.stream({ ...prepared.config, messages: [systemMessage,message], signal })[Symbol.asyncIterator]();
+      const iterator = prepared.stream({ ...prepared.config, messages: [systemMessage,message], signal, purpose:'mimir-research-runtime' })[Symbol.asyncIterator]();
       let text = "", finish, done = false;
       try {
         while (true) {
@@ -2857,7 +2861,7 @@ function researchAdapters({ research, core, context, ctx }) {
         const choice = { ...ctx.agentDefaultModel.currentSelection() };
         const metadata = {adapter:"dsh-prepareCall",...choice,requestedReasoningEffort:choice.reasoningEffort??null,outputMode:"concise"};
         return {metadata,generate({ system, payload, signal }) {
-          return callModel(ctx.llm, choice, JSON.stringify(payload), signal, system + '\n' + RESEARCH_OUTPUT_INSTRUCTION, {maxTokens:16384,concise:true,onConfig:request=>{metadata.reasoningEffort=request.reasoningEffort;}});
+          return callModel(ctx.llm, choice, JSON.stringify(payload), signal, system + '\n' + RESEARCH_OUTPUT_INSTRUCTION, {maxTokens:16384,concise:true,reductionManaged:true,onConfig:request=>{metadata.reasoningEffort=request.reasoningEffort;}});
         } };
       },
       generate(options) {

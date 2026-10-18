@@ -4,7 +4,7 @@ export function researchChatConstraint(options) {
   if(options.purpose==='mimir-research-quality-repair')return null
   const messages=options.messages||[]
   if(!messages.some(message=>['system','developer'].includes(message.role)&&/你是\s*Mimir\s*科研助手/u.test(textOf(message))))return null
-  const question=textOf(messages.findLast(message=>message.role==='user'&&message.source?.kind!=='runtime-context'))
+  const question=textOf(messages.findLast(message=>message.role==='user'&&!['runtime-context','model-selection'].includes(message.source?.kind)))
   const limits=[...question.matchAll(/(?:最多|不超过|至多|控制在|限制在|≤|<=)\s*(\d+)\s*字|(\d+)\s*字(?:以内|以下)/gu)].map(match=>Number(match[1]??match[2]))
   if(!limits.length)return null
   const limit=Math.min(...limits)

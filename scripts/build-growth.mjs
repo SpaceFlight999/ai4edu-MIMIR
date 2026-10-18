@@ -3,7 +3,7 @@ import { patchWorkbenchFunctions } from './workbench-functional-patches.mjs'
 const wordmark = readFileSync('mimir-wordmark/interactive.mjs', 'utf8').replace(/^export /gm, '')
 const displayVersion = JSON.parse(readFileSync('growth/package.json', 'utf8')).version
 const source = 'const MIMIR_DISPLAY_VERSION = ' + JSON.stringify(displayVersion) + ';\n' + wordmark + '\n' + ['daily.js', 'configuration.js', 'models.js', 'ai-status.js', 'topology.js', 'journey.js', 'robotics.js', 'study.js', 'learning.js', 'curriculum.js', 'library.js', 'app.js'].map(name => readFileSync('growth/client/' + name, 'utf8')).join('\n')
-const style = ['style.css', 'navigation.css', 'topology.css', 'journey.css', 'learning.css', 'library.css', 'course.css', 'customization.css', 'prompt5.css', 'prompt6.css', 'wordmark.css', 'home-shortcuts.css'].map(name => readFileSync('growth/client/' + name, 'utf8')).join('\n')
+const style = ['style.css', 'navigation.css', 'topology.css', 'journey.css', 'learning.css', 'library.css', 'course.css', 'customization.css', 'prompt5.css', 'prompt6.css', 'wordmark.css', 'home-shortcuts.css', 'models.css', 'plan-preview.css', 'document-title.css'].map(name => readFileSync('growth/client/' + name, 'utf8')).join('\n')
 if (/\bimport\s/.test(source)) throw new Error('Client entry must use injected runtime modules, not a second React copy.')
 mkdirSync('growth/lib', { recursive: true })
 writeFileSync('growth/lib/client.js', `window.__ModuleLoader__.load({ id: '@mimir/growth-layer', factory: (require) => {\nconst exports = {};\nconst GROWTH_CSS = ${JSON.stringify(style)};\n${source}\nreturn exports;\n} });\n`)
@@ -37,6 +37,11 @@ if (workbench.includes(reviewStart)) {
   if (!workbench.includes('function Fhe(')) throw new Error('Workbench review insertion point missing')
   workbench = workbench.replace('function Fhe(', review + '\nfunction Fhe(')
 }
+const titleStart = '/* MIMIR_DOCUMENT_TITLE_START */', titleEnd = '/* MIMIR_DOCUMENT_TITLE_END */'
+const titleUi = titleStart + '\n' + readFileSync('growth/client/document-title.js', 'utf8') + '\n' + titleEnd
+if (workbench.includes(titleStart)) {
+  if (workbench.split(titleStart).length !== 2 || workbench.split(titleEnd).length !== 2 || workbench.indexOf(titleEnd) < workbench.indexOf(titleStart)) throw new Error('Document title markers are invalid')
+  workbench = workbench.slice(0, workbench.indexOf(titleStart)) + titleUi + workbench.slice(workbench.indexOf(titleEnd) + titleEnd.length)
+} else workbench = workbench.replace('function Fhe(', titleUi + '\nfunction Fhe(')
 workbench = patchWorkbenchFunctions(workbench)
 writeFileSync(workbenchPath, workbench)
-

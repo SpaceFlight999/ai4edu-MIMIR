@@ -40,6 +40,7 @@ export function growthAgentTools(payload) {
 export const GROWTH_AGENT_TIMEOUT_MS = 300000
 export function growthFailure(error) {
   const code = error?.code, status = error?.status ?? error?.statusCode ?? error?.httpStatus ?? error?.failure?.status
+  if (code === 'MODEL_OUTPUT_LIMIT') return new GrowthError(code, '模型输出经自动缩减后仍未完整生成，结果未保存；请缩小目标后重试。', 422)
   if (code === 'MODEL_POLICY') return new GrowthError(code, '当前模型配置被拒绝，请核对所选提供商、模型及其配置。', 422)
   if (code === 'MODEL_ENDPOINT_POLICY') return new GrowthError(code, '当前提供商地址配置无效，请核对该提供商的连接设置。', 422)
   if (code === 'MODEL_CONFIGURATION') return new GrowthError(code, '模型配置无效，请核对所选提供商、思考强度及请求限制。', 422)

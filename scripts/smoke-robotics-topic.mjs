@@ -15,8 +15,7 @@ const reportPath = join(root, `artifacts/robotics-topic-smoke-${growthVersion}.j
 mkdirSync(home, { recursive: true })
 const learnerFile = join(root, 'data/student-1/mimir-growth/growth.sqlite')
 const learnerHash = () => existsSync(learnerFile) ? createHash('sha256').update(readFileSync(learnerFile)).digest('hex') : null
-const priorLearnerHash = learnerHash(), checks = [], errors = [], dialogs = []
-let materialsLive = null
+const priorLearnerHash = learnerHash(), checks = [], errors = []
 let host, edge, browser, instance, hostOutput = ''
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
 async function ready(file, timeout = 45000) {
