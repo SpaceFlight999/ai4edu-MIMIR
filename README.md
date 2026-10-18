@@ -44,6 +44,8 @@ npx.cmd --registry=https://registry.npmjs.org/ @spaceflight99/mimir@0.12.10
 npx.cmd --registry=https://registry.npmjs.org/ @spaceflight99/mimir@0.12.10 --install-only
 ```
 
+> **关于命令写法：**本文统一使用 `npx.cmd`，以兼容 Windows PowerShell 和命令提示符，减少 PowerShell 脚本执行策略导致的启动报错。它与 `npx` 调用同一工具，无需额外安装。请完整复制上述命令执行。
+
 ### 3. 安装的软件在哪里？
 
 程序按当前 Windows 账户安装，默认位置是：
