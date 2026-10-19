@@ -1,0 +1,25 @@
+Mimir 科研工作空间 · 0.12.11-beta.2
+Windows 64 位免安装测试版
+
+
+日常使用
+系统托盘中的 Mimir 图标提供：打开 Mimir、模型凭据、打开数据目录、退出 Mimir。
+修改模型凭据后，退出并重新启动软件使其生效。
+关闭浏览器不会退出后台服务。结束使用时，请从托盘选择“退出 Mimir”。
+请完成保存并等待当前任务结束，再退出或更新包体。
+
+资料与更新
+通过 npx 安装时，资料保存在 %LOCALAPPDATA%\MIMIR-Evaluation\data\0.12.10。直接解压 ZIP 并运行 Mimir.exe 时，资料默认保存在 %LOCALAPPDATA%\Mimir Beta。资料均与程序目录分开。
+更新前请从托盘退出软件。npx 安装的用户运行新版安装命令，并使用自动创建的桌面快捷方式启动；资料目录保持不变。直接解压 ZIP 的用户将新包解压到新目录，再启动新的 Mimir.exe。
+请保留整个 system 目录。运行依赖已集成，无需另装 Node、Python 或 TeX。
+包内不包含开发者的模型密钥、聊天、论文或文稿。API Key 由当前 Windows 用户加密保存。
+测试版使用默认浏览器显示界面，需要 Windows 10/11 x64 与现代浏览器。
+启动器暂未签名。
+
+具体使用
+见github仓库 https://github.com/SpaceFlight999/ai4edu-MIMIR
+
+反馈
+请记录操作步骤、期望结果、实际结果与软件版本。
+启动异常时，打开数据目录中的 launcher.log；发送前检查是否包含自己的资料内容。
+请勿将 model.secret 或完整数据目录作为反馈附件发送。

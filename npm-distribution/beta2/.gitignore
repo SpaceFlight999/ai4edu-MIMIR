@@ -1,0 +1,7 @@
+release/
+real-install-smoke*/
+extract-tests-*/
+long-path-test-*/
+shortcut-test-*/
+npm-cache/
+github-upload/

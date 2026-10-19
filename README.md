@@ -1,10 +1,12 @@
 # MIMIR · 智慧之泉
 
-**一个含“成长规划、学习实践、论文导读与阶段回望”的个人学习工作空间。**
+**把成长目标、学习实践、论文阅读与阶段回望，放进同一个个人学习工作空间。**
 
 MIMIR 面向希望自主安排学习与成长的学生。你可以从自己的目的、基础和可用时间出发，预览并确认学习方案，在实践中保存过程与成果，再根据体验调整下一步。首批课程与实践示例聚焦机器人与智能制造方向。
 
-当前版本：**v0.12.10**。支持 **Windows x64**，通过 `npx.cmd` 安装和启动。
+本次更新：改进 Windows 长路径解压、更新使用说明，并自动创建桌面快捷方式。
+
+当前版本：**v0.12.11-beta.2**。支持 **Windows x64**，通过 `npx.cmd` 安装，完成后可从桌面快捷方式启动。
 
 ## 基本功能
 
@@ -22,7 +24,7 @@ MIMIR 面向希望自主安排学习与成长的学生。你可以从自己的�
 
 - Windows 64 位（x64）。
 - [Node.js 24 或更新版本](https://nodejs.org/)，包含 npm 和 npx。
-- 首次安装需联网访问 npm 官方源与 GitHub Releases。运行包约 **938 MiB**，解压后约 **2.23 GiB**，请预留足够磁盘空间。
+- 首次安装需联网访问 npm 官方源与 GitHub Releases。运行包约 **938 MiB**，解压后约 **2.23 GiB**，安装过程同时保留 ZIP 缓存与解压文件，请至少预留 **5 GiB** 可用空间。
 
 不需要提前安装 MIMIR，也不需要单独配置 DSH。完整运行环境已随运行包提供，使用者无需注册 npm 或 GitHub 账号。
 
@@ -31,20 +33,18 @@ MIMIR 面向希望自主安排学习与成长的学生。你可以从自己的�
 打开 Windows PowerShell，复制并执行：
 
 ```powershell
-npx.cmd --registry=https://registry.npmjs.org/ @spaceflight99/mimir@0.12.10
+npx.cmd --registry=https://registry.npmjs.org/ @spaceflight99/mimir@0.12.11-beta.2
 ```
 
-如果出现 `Ok to proceed? (y)`，输入 `y` 并回车。首次执行会下载运行包、校验 SHA-256、解压并启动 MIMIR；过程中请保持窗口打开。下载和解压时间取决于网络与磁盘速度。
+如果出现 `Ok to proceed? (y)`，输入 `y` 并回车。首次执行会下载运行包、校验 SHA-256、解压、自动创建桌面「MIMIR」快捷方式并启动；过程中请保持窗口打开。下载和解压时间取决于网络与磁盘速度。
 
-以后仍使用同一条命令启动，程序会复用已经安装的版本，并保留本机的学习记录。
+以后可直接双击桌面「MIMIR」图标启动，也可重复执行同一条命令。程序会复用已安装版本，并保留本机学习记录。升级前请先从托盘退出旧版。
 
 仅安装、暂不启动时，可执行：
 
 ```powershell
-npx.cmd --registry=https://registry.npmjs.org/ @spaceflight99/mimir@0.12.10 --install-only
+npx.cmd --registry=https://registry.npmjs.org/ @spaceflight99/mimir@0.12.11-beta.2 --install-only
 ```
-
-> **关于命令写法：**本文统一使用 `npx.cmd`，以兼容 Windows PowerShell 和命令提示符，减少 PowerShell 脚本执行策略导致的启动报错。它与 `npx` 调用同一工具，无需额外安装。请完整复制上述命令执行。
 
 ### 3. 安装的软件在哪里？
 
@@ -64,23 +64,19 @@ C:\Users\你的Windows用户名\AppData\Local\MIMIR-Evaluation
 
 | 目录 | 内容 |
 | --- | --- |
-| `versions\0.12.10-4fb1588e98f9\runtime` | v0.12.10 的完整程序与运行环境，启动文件为 `Mimir.exe` |
+| `versions\b2-1171b80c6d40\runtime` | v0.12.11-beta.2 的完整程序与运行环境，启动文件为 `Mimir.exe` |
 | `data\0.12.10` | 此版本的个人学习记录、论文资料和本机配置 |
 | `cache` | 已下载的运行包缓存 |
 
 安装时所在的 PowerShell 工作目录不影响上述安装位置。不同 Windows 账户各自使用自己的安装与数据目录；卸载前如需保留学习资料，请先备份 `data\0.12.10`。
 
-### 4. 创建桌面快捷方式（可选）
+### 4. 桌面快捷方式与更新
 
-安装成功后，在桌面空白处右键，选择 **新建 → 快捷方式**。
+beta2 安装完成后会自动创建桌面「MIMIR」快捷方式，图标与程序托盘中的双线 M 图案一致。快捷方式直接启动本机程序，无需每次通过网络下载。
 
-“对象的位置”填写：
+从旧版升级时，继续使用原有的 `data\0.12.10` 资料目录。请通过安装命令或自动生成的快捷方式启动，以使用同一套学习记录和配置。手动解压 ZIP 后直接运行 Mimir.exe，默认使用的资料目录是 `%LOCALAPPDATA%\Mimir Beta`。
 
-```text
-C:\Windows\System32\cmd.exe /k npx.cmd --registry=https://registry.npmjs.org/ @spaceflight99/mimir@0.12.10
-```
-
-点击“下一步”，名称填写 **MIMIR**，再点击“完成”。以后双击快捷方式即可启动；命令窗口会保留，方便查看启动信息或报错。
+如果桌面受权限限制，或已有同名的其他快捷方式，安装器会显示提示；处理后重新执行安装命令即可重建。不要删除自己的资料目录。
 
 ## 现在开始体验
 
@@ -170,7 +166,7 @@ C:\Windows\System32\cmd.exe /k npx.cmd --registry=https://registry.npmjs.org/ @s
 
 **为什么安装后找不到桌面图标？**
 
-当前安装器不会自动创建桌面快捷方式。可以继续使用上述命令启动，或按“创建桌面快捷方式”一节手动添加。
+beta2 已支持自动创建。如果桌面写入失败或存在同名快捷方式冲突，请查看安装提示，处理后重新执行安装命令。旧版安装器不会自动创建。
 
 **下载源码 ZIP 后能直接运行吗？**
 
@@ -178,7 +174,7 @@ C:\Windows\System32\cmd.exe /k npx.cmd --registry=https://registry.npmjs.org/ @s
 
 ## 下载与文档
 
-- [v0.12.10 版本发布与运行包](https://github.com/SpaceFlight999/ai4edu-MIMIR/releases/tag/v0.12.10)
+- [v0.12.11-beta.2 版本发布与运行包](https://github.com/SpaceFlight999/ai4edu-MIMIR/releases/tag/v0.12.11-beta.2)
 - [npm 安装器](https://www.npmjs.com/package/@spaceflight99/mimir)
 - [开发与历史版本说明](README.development.md)
 - [开发交接说明](HANDOFF.md)

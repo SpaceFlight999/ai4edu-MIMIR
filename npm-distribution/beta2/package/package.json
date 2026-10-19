@@ -1,0 +1,33 @@
+{
+  "name": "@spaceflight99/mimir",
+  "version": "0.12.11-beta.2",
+  "description": "Install and launch the Windows x64 MIMIR desktop application",
+  "type": "module",
+  "bin": {
+    "mimir": "bin/mimir.mjs"
+  },
+  "files": [
+    "bin/",
+    "lib/",
+    "release.json",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "os": [
+    "win32"
+  ],
+  "cpu": [
+    "x64"
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/",
+    "tag": "beta"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SpaceFlight999/ai4edu-MIMIR.git"
+  }
+}
