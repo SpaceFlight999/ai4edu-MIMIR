@@ -180,4 +180,4 @@ beta2 已支持自动创建。如果桌面写入失败或存在同名快捷方�
 ## 下载与文档
 
 - [v0.12.11-beta.2 版本发布与运行包](https://github.com/SpaceFlight999/ai4edu-MIMIR/releases/tag/v0.12.11-beta.2)
-- [npm 安装器](https://www.npmjs.com/package/@spaceflight99/mimir)
+- [npm 安装器](https://www.npmjs.com/package/@spaceflight99/mimir/v/0.12.11-beta.2)
