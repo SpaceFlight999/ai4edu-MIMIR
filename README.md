@@ -4,6 +4,11 @@
 
 MIMIR 面向希望自主安排学习与成长的学生。你可以从自己的目的、基础和可用时间出发，预览并确认学习方案，在实践中保存过程与成果，再根据体验调整下一步。首批课程与实践示例聚焦机器人与智能制造方向。
 
+**项目演示html**
+[概述(2min)](MIMIR-概述.html)
+[核心场景展示(6min)](MIMIR-核心场景演示.html)
+[项目总结(2min)](MIMIR-项目总结.html)
+
 本次更新：改进 Windows 长路径解压、更新使用说明，并自动创建桌面快捷方式。
 
 当前版本：**v0.12.11-beta.2**。支持 **Windows x64**，通过 `npx.cmd` 安装，完成后可从桌面快捷方式启动。
@@ -152,7 +157,7 @@ beta2 安装完成后会自动创建桌面「MIMIR」快捷方式，图标与程
 
 ## 常见问题
 
-**需要单独安装 DSH 吗？**
+**需要单独安装 Deepseek Harness 吗？**
 
 不需要。发布的运行包已经包含 DSH、MIMIR 和成长模块。
 
@@ -170,11 +175,9 @@ beta2 已支持自动创建。如果桌面写入失败或存在同名快捷方�
 
 **下载源码 ZIP 后能直接运行吗？**
 
-源码仓库不包含完整运行环境。普通使用者请优先使用上面的 `npx.cmd` 命令安装；开发者可查阅 [开发与历史版本说明](README.development.md) 及 [开发交接说明](HANDOFF.md)。
+源码仓库不包含完整运行环境。普通使用者请优先使用上面的 `npx.cmd` 命令安装；
 
 ## 下载与文档
 
 - [v0.12.11-beta.2 版本发布与运行包](https://github.com/SpaceFlight999/ai4edu-MIMIR/releases/tag/v0.12.11-beta.2)
 - [npm 安装器](https://www.npmjs.com/package/@spaceflight99/mimir)
-- [开发与历史版本说明](README.development.md)
-- [开发交接说明](HANDOFF.md)
